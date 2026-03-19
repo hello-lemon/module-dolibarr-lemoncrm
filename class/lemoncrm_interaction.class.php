@@ -356,7 +356,7 @@ class LemonCRMInteraction extends CommonObject
 			require_once DOL_DOCUMENT_ROOT.'/comm/action/class/actioncomm.class.php';
 			$actioncomm = new ActionComm($this->db);
 			if ($actioncomm->fetch($this->fk_actioncomm) > 0) {
-				$actioncomm->delete();
+				$actioncomm->delete($user);
 			}
 		}
 
