@@ -1,0 +1,109 @@
+Module500210Name = LemonCRM
+Module500210Desc = Suivi des interactions clients et prospects
+
+# Setup
+LemonCRMSetup = Configuration LemonCRM
+LemonCRMAbout = A propos de LemonCRM
+
+# Permissions
+ReadInteraction = Consulter les interactions
+WriteInteraction = Creer/modifier les interactions
+DeleteInteraction = Supprimer les interactions
+
+# Menu
+LemonCRMDashboard = Dashboard CRM
+NewInteraction = Nouvelle interaction
+InteractionList = Liste des interactions
+
+# Interaction types
+AC_TEL = Appel telephonique
+AC_EMAIL = Email
+AC_LINKEDIN = Message LinkedIn
+AC_TEAMS = Reunion Teams
+AC_RDV = Rendez-vous
+AC_MEETING_INPERSON = Rendez-vous physique
+AC_OTH = Autre
+
+# Direction
+DirectionIN = Entrant
+DirectionOUT = Sortant
+
+# Sentiment
+SentimentPositive = Positif
+SentimentNeutral = Neutre
+SentimentNegative = Negatif
+
+# Prospect status
+ProspectCold = Froid
+ProspectWarm = Tiede
+ProspectHot = Chaud
+ProspectNegotiation = Negociation
+ProspectWon = Gagne
+ProspectLost = Perdu
+
+# Followup
+FollowupAction = Prochaine action
+FollowupDate = Date de relance
+FollowupMode = Mode de relance
+FollowupDone = Relance effectuee
+FollowupPending = A faire
+FollowupOverdue = En retard
+FollowupToday = Aujourd'hui
+MarkFollowupDone = Marquer relance faite
+
+# Followup modes
+FollowupPhone = Telephone
+FollowupEmail = Email
+FollowupLinkedIn = LinkedIn
+
+# Card
+InteractionCard = Fiche interaction
+InteractionType = Type d'interaction
+DateInteraction = Date de l'interaction
+DurationMinutes = Duree (minutes)
+Direction = Direction
+Summary = Resume de l'echange
+Sentiment = Sentiment
+ProspectStatus = Statut prospect
+
+# List
+Interactions = Interactions
+InteractionsCRM = Interactions CRM
+NoInteractions = Aucune interaction
+AllFollowups = Toutes les relances
+PendingFollowups = Relances a faire
+OverdueFollowups = Relances en retard
+DoneFollowups = Relances effectuees
+
+# Dashboard
+DashboardCRM = Dashboard CRM
+InteractionsThisWeek = Interactions cette semaine
+OverdueFollowupsCount = Relances en retard
+MaxDaysWithoutContact = Jours sans contact max
+RecentInteractions = Interactions recentes (30 jours)
+PendingFollowupsList = Relances a faire
+OverdueInvoices = Factures en retard
+NoOverdueInvoices = Aucune facture en retard
+AutoEvents = Evenements automatiques
+DaysOverdue = %s jours de retard
+AmountHT = Montant HT
+AmountTTC = Montant TTC
+PaymentDeadline = Echeance
+
+# Hooks
+NewInteractionWith = Nouvelle interaction avec %s
+
+# Confirm
+ConfirmDeleteInteraction = Etes-vous sur de vouloir supprimer cette interaction ?
+InteractionDeleted = Interaction supprimee
+InteractionCreated = Interaction creee
+InteractionUpdated = Interaction mise a jour
+
+# AI (Phase 2)
+LemonCRMAIApiKey = Cle API Claude (Anthropic)
+LemonCRMAIModel = Modele IA
+AISuggest = Suggestion IA
+AIProspectSummary = Resume prospect
+AISuggestFollowup = Suggestion de relance
+AIDraftEmail = Brouillon email
+AICallScript = Script d'appel
