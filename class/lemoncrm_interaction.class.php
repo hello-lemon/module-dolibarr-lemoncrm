@@ -27,6 +27,7 @@ class LemonCRMInteraction extends CommonObject
 	public $summary;
 	public $followup_action;
 	public $followup_date;
+	public $followup_time;
 	public $followup_done = 0;
 	public $followup_mode;
 	public $date_interaction;
@@ -90,7 +91,7 @@ class LemonCRMInteraction extends CommonObject
 			// 2. Create lemoncrm_interaction record
 			$sql = "INSERT INTO ".MAIN_DB_PREFIX."lemoncrm_interaction (";
 			$sql .= "ref, fk_actioncomm, interaction_type, fk_soc, fk_socpeople,";
-			$sql .= " fk_user_author, summary, followup_action, followup_date, followup_done,";
+			$sql .= " fk_user_author, summary, followup_action, followup_date, followup_time, followup_done,";
 			$sql .= " followup_mode, date_interaction, duration_minutes, direction,";
 			$sql .= " sentiment, prospect_status, status, datec, entity";
 			$sql .= ") VALUES (";
@@ -103,6 +104,7 @@ class LemonCRMInteraction extends CommonObject
 			$sql .= " ".(!empty($this->summary) ? "'".$this->db->escape($this->summary)."'" : "NULL").",";
 			$sql .= " ".(!empty($this->followup_action) ? "'".$this->db->escape($this->followup_action)."'" : "NULL").",";
 			$sql .= " ".(!empty($this->followup_date) ? "'".$this->db->escape($this->followup_date)."'" : "NULL").",";
+			$sql .= " ".(!empty($this->followup_time) ? "'".$this->db->escape($this->followup_time)."'" : "NULL").",";
 			$sql .= " ".((int)$this->followup_done).",";
 			$sql .= " ".(!empty($this->followup_mode) ? "'".$this->db->escape($this->followup_mode)."'" : "NULL").",";
 			$sql .= " '".$this->db->idate($this->date_interaction)."',";
@@ -214,6 +216,7 @@ class LemonCRMInteraction extends CommonObject
 		$sql .= " summary = ".(!empty($this->summary) ? "'".$this->db->escape($this->summary)."'" : "NULL").",";
 		$sql .= " followup_action = ".(!empty($this->followup_action) ? "'".$this->db->escape($this->followup_action)."'" : "NULL").",";
 		$sql .= " followup_date = ".(!empty($this->followup_date) ? "'".$this->db->escape($this->followup_date)."'" : "NULL").",";
+		$sql .= " followup_time = ".(!empty($this->followup_time) ? "'".$this->db->escape($this->followup_time)."'" : "NULL").",";
 		$sql .= " followup_done = ".((int)$this->followup_done).",";
 		$sql .= " followup_mode = ".(!empty($this->followup_mode) ? "'".$this->db->escape($this->followup_mode)."'" : "NULL").",";
 		$sql .= " date_interaction = '".$this->db->idate($this->date_interaction)."',";
@@ -281,7 +284,7 @@ class LemonCRMInteraction extends CommonObject
 	{
 		$sql = "SELECT i.rowid, i.ref, i.fk_actioncomm, i.interaction_type,";
 		$sql .= " i.fk_soc, i.fk_socpeople, i.fk_user_author,";
-		$sql .= " i.summary, i.followup_action, i.followup_date, i.followup_done,";
+		$sql .= " i.summary, i.followup_action, i.followup_date, i.followup_time, i.followup_done,";
 		$sql .= " i.followup_mode, i.date_interaction, i.duration_minutes,";
 		$sql .= " i.direction, i.sentiment, i.prospect_status, i.status,";
 		$sql .= " i.datec, i.tms, i.entity,";
@@ -315,6 +318,7 @@ class LemonCRMInteraction extends CommonObject
 				$this->summary = $obj->summary;
 				$this->followup_action = $obj->followup_action;
 				$this->followup_date = $obj->followup_date;
+				$this->followup_time = $obj->followup_time;
 				$this->followup_done = $obj->followup_done;
 				$this->followup_mode = $obj->followup_mode;
 				$this->date_interaction = $this->db->jdate($obj->date_interaction);

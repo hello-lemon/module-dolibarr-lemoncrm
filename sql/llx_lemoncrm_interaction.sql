@@ -16,6 +16,7 @@ CREATE TABLE llx_lemoncrm_interaction (
     summary           TEXT,
     followup_action   TEXT,
     followup_date     DATE,
+    followup_time     TIME,
     followup_done     SMALLINT DEFAULT 0,
     followup_mode     VARCHAR(32),
     date_interaction  DATETIME NOT NULL,

@@ -78,6 +78,7 @@ if ($action == 'add' && $user->hasRight('lemoncrm', 'interaction', 'write')) {
 	$object->summary = GETPOST('summary', 'alphanohtml');
 	$object->followup_action = GETPOST('followup_action', 'restricthtml');
 	$object->followup_date = GETPOST('followup_date', 'alpha');
+	$object->followup_time = GETPOST('followup_time', 'alpha');
 	$object->followup_mode = GETPOST('followup_mode', 'alpha');
 	$object->sentiment = GETPOST('sentiment', 'alpha');
 	$object->prospect_status = GETPOST('prospect_status', 'alpha');
@@ -144,6 +145,7 @@ if ($action == 'update' && $user->hasRight('lemoncrm', 'interaction', 'write')) 
 	$object->summary = GETPOST('summary', 'alphanohtml');
 	$object->followup_action = GETPOST('followup_action', 'restricthtml');
 	$object->followup_date = GETPOST('followup_date', 'alpha');
+	$object->followup_time = GETPOST('followup_time', 'alpha');
 	$object->followup_mode = GETPOST('followup_mode', 'alpha');
 	$object->sentiment = GETPOST('sentiment', 'alpha');
 	$object->prospect_status = GETPOST('prospect_status', 'alpha');
@@ -460,7 +462,11 @@ if ($action == 'create' || ($action == 'edit' && $id > 0)) {
 	print '</div>';
 	print '<div class="lcrm-row">';
 	print '<div class="lcrm-field">';
-	print '<input type="date" name="followup_date" value="'.dol_escape_htmltag($curFollowDate).'" class="lcrm-input">';
+	$curFollowTime = $isEdit ? $object->followup_time : GETPOST('followup_time', 'alpha');
+	print '<div style="display:flex;gap:8px;align-items:center;">';
+	print '<input type="date" name="followup_date" value="'.dol_escape_htmltag($curFollowDate).'" class="lcrm-input" style="flex:1;">';
+	print '<input type="time" name="followup_time" value="'.dol_escape_htmltag($curFollowTime).'" class="lcrm-input" style="width:110px;">';
+	print '</div>';
 	print '</div>';
 	print '<div class="lcrm-field">';
 	print '<div class="lcrm-pill-row">';
@@ -796,6 +802,9 @@ elseif ($id > 0) {
 		if (!empty($object->followup_date)) {
 			print '<div class="lcrm-view-followup-date">';
 			print '<span class="fa fa-calendar"></span> '.$object->followup_date;
+			if (!empty($object->followup_time)) {
+				print ' à '.dol_escape_htmltag($object->followup_time);
+			}
 			if (!empty($object->followup_mode)) {
 				$modeIcon = array('phone' => 'fa-phone', 'email' => 'fa-envelope', 'linkedin' => 'fa-linkedin');
 				$mLabel = $followup_modes[$object->followup_mode] ?? $object->followup_mode;
