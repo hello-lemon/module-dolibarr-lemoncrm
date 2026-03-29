@@ -99,16 +99,34 @@ class modLemonCRM extends DolibarrModules
 		$this->menu = array();
 		$r = 0;
 
-		// Top menu sous Commercial
+		// === Menu principal "Lemon" en haut ===
 		$this->menu[$r] = array(
-			'fk_menu' => 'fk_mainmenu=commercial',
+			'fk_menu' => '',
+			'type' => 'top',
+			'titre' => 'Lemon',
+			'prefix' => img_picto('', 'fa-lemon', 'class="fas paddingright pictofixedwidth"'),
+			'mainmenu' => 'lemon',
+			'leftmenu' => '',
+			'url' => '/lemoncrm/index.php',
+			'langs' => '',
+			'position' => 100,
+			'enabled' => '1',
+			'perms' => '1',
+			'target' => '',
+			'user' => 0,
+		);
+		$r++;
+
+		// --- CRM ---
+		$this->menu[$r] = array(
+			'fk_menu' => 'fk_mainmenu=lemon',
 			'type' => 'left',
-			'titre' => 'Dashboard CRM',
+			'titre' => 'CRM',
 			'prefix' => img_picto('', 'fa-comments', 'class="fas paddingright pictofixedwidth"'),
-			'mainmenu' => 'commercial',
+			'mainmenu' => 'lemon',
 			'leftmenu' => 'lemoncrm',
-			'url' => '/lemoncrm/dashboard.php',
-			'langs' => 'lemoncrm@lemoncrm',
+			'url' => '/lemoncrm/index.php',
+			'langs' => '',
 			'position' => 100,
 			'enabled' => '$conf->lemoncrm->enabled',
 			'perms' => '$user->hasRight("lemoncrm", "interaction", "read")',
@@ -118,32 +136,32 @@ class modLemonCRM extends DolibarrModules
 		$r++;
 
 		$this->menu[$r] = array(
-			'fk_menu' => 'fk_mainmenu=commercial,fk_leftmenu=lemoncrm',
+			'fk_menu' => 'fk_mainmenu=lemon,fk_leftmenu=lemoncrm',
 			'type' => 'left',
-			'titre' => 'Nouvelle interaction',
-			'mainmenu' => 'commercial',
-			'leftmenu' => 'lemoncrm_new',
-			'url' => '/lemoncrm/interaction_card.php?action=create',
-			'langs' => 'lemoncrm@lemoncrm',
+			'titre' => 'Dashboard',
+			'mainmenu' => 'lemon',
+			'leftmenu' => 'lemoncrm_dashboard',
+			'url' => '/lemoncrm/index.php',
+			'langs' => '',
 			'position' => 101,
 			'enabled' => '$conf->lemoncrm->enabled',
-			'perms' => '$user->hasRight("lemoncrm", "interaction", "write")',
+			'perms' => '$user->hasRight("lemoncrm", "interaction", "read")',
 			'target' => '',
 			'user' => 0,
 		);
 		$r++;
 
 		$this->menu[$r] = array(
-			'fk_menu' => 'fk_mainmenu=commercial,fk_leftmenu=lemoncrm',
+			'fk_menu' => 'fk_mainmenu=lemon,fk_leftmenu=lemoncrm',
 			'type' => 'left',
-			'titre' => 'Liste interactions',
-			'mainmenu' => 'commercial',
-			'leftmenu' => 'lemoncrm_list',
-			'url' => '/lemoncrm/dashboard.php',
-			'langs' => 'lemoncrm@lemoncrm',
+			'titre' => 'Nouvelle interaction',
+			'mainmenu' => 'lemon',
+			'leftmenu' => 'lemoncrm_new',
+			'url' => '/lemoncrm/interaction_card.php?action=create',
+			'langs' => '',
 			'position' => 102,
 			'enabled' => '$conf->lemoncrm->enabled',
-			'perms' => '$user->hasRight("lemoncrm", "interaction", "read")',
+			'perms' => '$user->hasRight("lemoncrm", "interaction", "write")',
 			'target' => '',
 			'user' => 0,
 		);
