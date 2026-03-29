@@ -228,6 +228,8 @@ if ($drawerMode) {
 		$_SESSION['dol_events']['errors'] = array();
 	}
 } else {
+	$_GET['mainmenu'] = 'lemon';
+	$_GET['leftmenu'] = 'lemoncrm';
 	llxHeader('', $title, '', '', 0, 0, '', '', '', 'mod-lemoncrm page-card');
 }
 

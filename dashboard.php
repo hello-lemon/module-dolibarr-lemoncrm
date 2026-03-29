@@ -45,6 +45,9 @@ if (GETPOST('action', 'alpha') == 'delete' && $user->hasRight('lemoncrm', 'inter
 	}
 }
 
+$_GET['mainmenu'] = 'lemon';
+$_GET['leftmenu'] = 'lemoncrm';
+
 llxHeader('', $langs->trans('DashboardCRM'), '', '', 0, 0, '', '', '', 'mod-lemoncrm page-dashboard');
 
 // If filtered by thirdparty, show thirdparty header with tabs

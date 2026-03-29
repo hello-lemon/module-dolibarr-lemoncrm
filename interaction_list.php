@@ -107,6 +107,8 @@ $title = $langs->trans('Interactions');
 if ($thirdparty) {
 	$title .= ' - '.$thirdparty->name;
 }
+$_GET['mainmenu'] = 'lemon';
+$_GET['leftmenu'] = 'lemoncrm';
 llxHeader('', $title, '', '', 0, 0, '', '', '', 'mod-lemoncrm page-list');
 
 // Thirdparty card header with tabs if in tab context
