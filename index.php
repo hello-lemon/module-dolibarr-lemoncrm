@@ -1,5 +1,4 @@
 <?php
 // LemonCRM — Point d'entrée principal
-// Redirige vers le dashboard
-header('Location: dashboard.php');
+header('Location: dashboard.php?mainmenu=lemon&leftmenu=lemoncrm');
 exit;
