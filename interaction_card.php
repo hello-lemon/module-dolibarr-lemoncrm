@@ -388,7 +388,7 @@ if ($action == 'create' || ($action == 'edit' && $id > 0)) {
 	print '</div>';
 	print '<div class="lcrm-field-inline">';
 	print '<span class="lcrm-pill-label">Durée</span>';
-	print '<input type="number" name="duration_minutes" value="'.(int)$curDuration.'" min="0" step="5" placeholder="min" class="lcrm-input-mini">';
+	print '<input type="number" name="duration_minutes" value="'.(int)$curDuration.'" min="0" step="1" placeholder="min" class="lcrm-input-mini">';
 	print ' min';
 	print '</div>';
 	print '</div>';
@@ -405,7 +405,7 @@ if ($action == 'create' || ($action == 'edit' && $id > 0)) {
 	print '<div class="lcrm-adaptive-meeting" style="display:none">';
 	print '<div class="lcrm-field-inline">';
 	print '<span class="lcrm-pill-label">Durée</span>';
-	print '<input type="number" name="duration_minutes_meeting" value="'.(int)$curDuration.'" min="0" step="15" placeholder="min" class="lcrm-input-mini">';
+	print '<input type="number" name="duration_minutes_meeting" value="'.(int)$curDuration.'" min="0" step="1" placeholder="min" class="lcrm-input-mini">';
 	print ' min';
 	print '</div>';
 	print '</div>';
