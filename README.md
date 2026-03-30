@@ -131,4 +131,4 @@ GPLv3 - Voir [LICENSE](LICENSE)
 
 ## Auteur
 
-**Axel Piquet-Gauthier** - [Lemon](https://hellolemon.fr)
+**Axel Piquet-Gauthier** - [Lemon, agence web et communication à Clermont-Ferrand](https://hellolemon.fr)
