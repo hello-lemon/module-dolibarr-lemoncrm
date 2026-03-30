@@ -30,6 +30,25 @@ if (!$user->hasRight('lemoncrm', 'interaction', 'read')) {
 $socid = GETPOSTINT('socid');
 $contactid = GETPOSTINT('contactid');
 
+// Close task (set progress to 100% + status closed)
+if (GETPOST('action', 'alpha') == 'closetask' && $user->hasRight('projet', 'creer')) {
+	$taskId = GETPOSTINT('taskid');
+	if ($taskId > 0) {
+		require_once DOL_DOCUMENT_ROOT.'/projet/class/task.class.php';
+		$task = new Task($db);
+		if ($task->fetch($taskId) > 0) {
+			$task->progress = 100;
+			$task->status = 2; // Clôturée
+			$task->fk_statut = 2;
+			$task->update($user);
+		}
+		$redir = $_SERVER["PHP_SELF"];
+		if ($socid) $redir .= '?socid='.$socid;
+		header("Location: ".$redir);
+		exit;
+	}
+}
+
 // Mark followup as done
 if (GETPOST('action', 'alpha') == 'followupdone' && $user->hasRight('lemoncrm', 'interaction', 'write')) {
 	$doneId = GETPOSTINT('id');
@@ -111,7 +130,7 @@ $followup_modes = lemoncrm_get_followup_modes();
 
 // SQL filter for socid
 $socFilter = ($socid > 0) ? " AND i.fk_soc = ".(int)$socid : "";
-$socFilterF = ($socid > 0) ? " AND f.fk_soc = ".(int)$socid : "";
+
 
 // ==================== STATS BAR ====================
 print '<div class="lemoncrm-stats-bar">';
@@ -139,11 +158,12 @@ if ($socid > 0) {
 	if ($resql && $db->num_rows($resql)) { $o = $db->fetch_object($resql); $maxDays = $o->days_since; $maxDaysCompany = $o->nom; }
 }
 
-// Overdue invoices count
-$sql = "SELECT COUNT(*) as cnt, SUM(f.total_ttc) as total FROM ".MAIN_DB_PREFIX."facture as f WHERE f.entity = ".$conf->entity." AND f.paye = 0 AND f.fk_statut = 1 AND f.date_lim_reglement < '".$db->escape($today)."'".$socFilterF;
+// Open tasks count
+$sql = "SELECT COUNT(*) as cnt FROM ".MAIN_DB_PREFIX."projet_task as t INNER JOIN ".MAIN_DB_PREFIX."projet as p ON t.fk_projet = p.rowid WHERE p.entity IN (".getEntity('projet').") AND p.fk_statut = 1 AND (t.progress IS NULL OR t.progress < 100)";
+if ($socid > 0) $sql .= " AND p.fk_soc = ".(int)$socid;
 $resql = $db->query($sql);
-$invoiceCount = 0; $invoiceTotal = 0;
-if ($resql && ($o = $db->fetch_object($resql))) { $invoiceCount = $o->cnt; $invoiceTotal = $o->total; }
+$taskCount = 0;
+if ($resql && ($o = $db->fetch_object($resql))) { $taskCount = $o->cnt; }
 
 print '<div class="lemoncrm-stat-card">';
 print '<div class="lemoncrm-stat-number">'.$weekCount.'</div>';
@@ -161,11 +181,10 @@ print '<div class="lemoncrm-stat-label">Sans contact';
 if ($maxDaysCompany) print '<br><small>'.dol_escape_htmltag(dol_trunc($maxDaysCompany, 25)).'</small>';
 print '</div></div>';
 
-print '<div class="lemoncrm-stat-card'.($invoiceCount > 0 ? ' lemoncrm-stat-alert' : '').'">';
-print '<div class="lemoncrm-stat-number">'.$invoiceCount.'</div>';
-print '<div class="lemoncrm-stat-label">Factures impayées';
-if ($invoiceTotal > 0) print '<br><small>'.price($invoiceTotal).' &euro;</small>';
-print '</div></div>';
+print '<div class="lemoncrm-stat-card">';
+print '<div class="lemoncrm-stat-number">'.$taskCount.'</div>';
+print '<div class="lemoncrm-stat-label">Tâches en cours</div>';
+print '</div>';
 
 print '</div>'; // stats-bar
 
@@ -221,34 +240,40 @@ print '</table>';
 
 print '</div><div class="fichetwothirdright">';
 
-// --- Overdue invoices ---
+// --- Open tasks ---
 print '<table class="noborder centpercent">';
-print '<tr class="liste_titre"><th colspan="4"><span class="fas fa-exclamation-triangle"></span> Factures impayées</th></tr>';
+print '<tr class="liste_titre"><th colspan="4"><span class="fas fa-tasks"></span> Tâches en cours</th></tr>';
 
-$sql = "SELECT f.rowid, f.ref, f.total_ttc, f.date_lim_reglement,";
-$sql .= " s.nom as thirdparty_name, s.rowid as socid,";
-$sql .= " DATEDIFF(NOW(), f.date_lim_reglement) as days_overdue";
-$sql .= " FROM ".MAIN_DB_PREFIX."facture as f";
-$sql .= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON f.fk_soc = s.rowid";
-$sql .= " WHERE f.entity = ".$conf->entity." AND f.paye = 0 AND f.fk_statut = 1 AND f.date_lim_reglement < '".$db->escape($today)."'".$socFilterF;
-$sql .= " ORDER BY days_overdue DESC LIMIT 15";
+$sql = "SELECT t.rowid as task_id, t.ref as task_ref, t.label as task_label, t.dateo as date_start,";
+$sql .= " p.ref as project_ref, p.title as project_title,";
+$sql .= " s.nom as thirdparty_name, s.rowid as socid";
+$sql .= " FROM ".MAIN_DB_PREFIX."projet_task as t";
+$sql .= " INNER JOIN ".MAIN_DB_PREFIX."projet as p ON t.fk_projet = p.rowid";
+$sql .= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON p.fk_soc = s.rowid";
+$sql .= " WHERE p.entity IN (".getEntity('projet').")";
+$sql .= " AND p.fk_statut = 1 AND (t.progress IS NULL OR t.progress < 100)";
+if ($socid > 0) $sql .= " AND p.fk_soc = ".(int)$socid;
+$sql .= " ORDER BY t.rowid DESC LIMIT 7";
 $resql = $db->query($sql);
 if ($resql) {
-	$numi = $db->num_rows($resql);
-	if ($numi == 0) {
-		print '<tr class="oddeven"><td colspan="4" class="opacitymedium">Aucune facture impayée</td></tr>';
+	$numt = $db->num_rows($resql);
+	if ($numt == 0) {
+		print '<tr class="oddeven"><td colspan="4" class="opacitymedium">Aucune tâche en cours</td></tr>';
 	}
-	$socHelper2 = new Societe($db);
 	while ($obj = $db->fetch_object($resql)) {
 		print '<tr class="oddeven">';
-		print '<td><a href="'.DOL_URL_ROOT.'/compta/facture/card.php?facid='.$obj->rowid.'">'.dol_escape_htmltag($obj->ref).'</a></td>';
-		$socHelper2->id = $obj->socid;
-		$socHelper2->name = $obj->thirdparty_name;
-		print '<td>'.$socHelper2->getNomUrl(1).'</td>';
-		print '<td class="right nowraponall">'.price($obj->total_ttc).' &euro;</td>';
-		print '<td><span class="badge badge-status8">'.$obj->days_overdue.'j</span></td>';
+		print '<td>'.dol_escape_htmltag(dol_trunc($obj->task_label, 30)).'</td>';
+		print '<td style="color:#6b7280;font-size:0.9em">'.dol_escape_htmltag(dol_trunc($obj->thirdparty_name ?: $obj->project_ref, 20)).'</td>';
+		print '<td style="width:20px">';
+		$closUrl = $_SERVER["PHP_SELF"].'?action=closetask&taskid='.$obj->task_id.'&token='.newToken();
+		if ($socid > 0) $closUrl .= '&socid='.$socid;
+		print '<a href="'.$closUrl.'" title="Terminer" onclick="return confirm(\'Terminer cette tâche ?\')"><span class="fas fa-check" style="color:#38A169"></span></a>';
+		print '</td>';
 		print '</tr>';
 	}
+}
+if ($taskCount > 7) {
+	print '<tr class="oddeven"><td colspan="3" class="center"><a href="'.DOL_URL_ROOT.'/projet/tasks/list.php?leftmenu=tasks">Voir les '.$taskCount.' tâches</a></td></tr>';
 }
 print '</table>';
 
@@ -788,10 +813,12 @@ $(function() {
 			}
 			var html = "<div style=\"margin-top:12px;border-top:1px solid #e5e7eb;padding-top:12px\">";
 			html += "<strong>Saisir du temps sur :</strong>";
-			html += "<div style=\"max-height:200px;overflow-y:auto;margin-top:8px\">";
+			html += "<input type=\"text\" class=\"flat\" id=\"lcrm-task-filter\" placeholder=\"Filtrer...\" style=\"width:100%;padding:6px 8px;margin:8px 0;border:1px solid #e5e7eb;border-radius:4px;font-size:0.9em\">";
+			html += "<div style=\"max-height:200px;overflow-y:auto\" id=\"lcrm-task-list\">";
 			$.each(data, function(i, item) {
 				var url = "'.DOL_URL_ROOT.'/projet/tasks/time.php?id=" + item.task_id + "&action=createtime";
-				html += "<a href=\"" + url + "\" style=\"display:block;padding:8px 10px;border-bottom:1px solid #f3f4f6;text-decoration:none;color:#374151\">";
+				var label = item.project_ref + " " + item.project_title + " " + item.task_ref + " " + item.task_label;
+				html += "<a href=\"" + url + "\" class=\"lcrm-task-item\" data-search=\"" + label.toLowerCase() + "\" style=\"display:block;padding:8px 10px;border-bottom:1px solid #f3f4f6;text-decoration:none;color:#374151\">";
 				html += "<strong>" + item.project_ref + "</strong> " + item.project_title;
 				html += "<br><span style=\"color:#6b7280;font-size:0.9em\">" + item.task_ref + " - " + item.task_label + "</span>";
 				if (minutes > 0) html += " <span style=\"color:#9ca3af;font-size:0.85em\">(" + minutes + " min)</span>";
@@ -800,6 +827,14 @@ $(function() {
 			html += "</div></div>";
 			$btn.closest("div").after(html);
 		}, "json");
+	});
+
+	// Filtre tâches temps consommé
+	$(document).on("input", "#lcrm-task-filter", function() {
+		var q = $(this).val().toLowerCase();
+		$(".lcrm-task-item").each(function() {
+			$(this).toggle($(this).data("search").indexOf(q) !== -1);
+		});
 	});
 
 	// Clic sur une interaction pour rattacher
