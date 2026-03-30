@@ -35,6 +35,8 @@ class LemonCRMInteraction extends CommonObject
 	public $direction = 'OUT';
 	public $sentiment;
 	public $prospect_status;
+	public $fk_parent;
+	public $fk_project;
 	public $status = 1;
 	public $datec;
 	public $tms;
@@ -93,7 +95,7 @@ class LemonCRMInteraction extends CommonObject
 			$sql .= "ref, fk_actioncomm, interaction_type, fk_soc, fk_socpeople,";
 			$sql .= " fk_user_author, summary, followup_action, followup_date, followup_time, followup_done,";
 			$sql .= " followup_mode, date_interaction, duration_minutes, direction,";
-			$sql .= " sentiment, prospect_status, status, datec, entity";
+			$sql .= " sentiment, prospect_status, fk_parent, fk_project, status, datec, entity";
 			$sql .= ") VALUES (";
 			$sql .= "'".$this->db->escape($this->ref)."',";
 			$sql .= " ".((int)$this->fk_actioncomm).",";
@@ -112,6 +114,8 @@ class LemonCRMInteraction extends CommonObject
 			$sql .= " '".$this->db->escape($this->direction)."',";
 			$sql .= " ".(!empty($this->sentiment) ? "'".$this->db->escape($this->sentiment)."'" : "NULL").",";
 			$sql .= " ".(!empty($this->prospect_status) ? "'".$this->db->escape($this->prospect_status)."'" : "NULL").",";
+			$sql .= " ".($this->fk_parent > 0 ? ((int)$this->fk_parent) : "NULL").",";
+			$sql .= " ".($this->fk_project > 0 ? ((int)$this->fk_project) : "NULL").",";
 			$sql .= " ".((int)$this->status).",";
 			$sql .= " '".$this->db->idate($this->datec)."',";
 			$sql .= " ".((int)$this->entity);
@@ -286,7 +290,7 @@ class LemonCRMInteraction extends CommonObject
 		$sql .= " i.fk_soc, i.fk_socpeople, i.fk_user_author,";
 		$sql .= " i.summary, i.followup_action, i.followup_date, i.followup_time, i.followup_done,";
 		$sql .= " i.followup_mode, i.date_interaction, i.duration_minutes,";
-		$sql .= " i.direction, i.sentiment, i.prospect_status, i.status,";
+		$sql .= " i.direction, i.sentiment, i.prospect_status, i.fk_parent, i.fk_project, i.status,";
 		$sql .= " i.datec, i.tms, i.entity,";
 		$sql .= " s.nom as thirdparty_name,";
 		$sql .= " CONCAT(sp.firstname, ' ', sp.lastname) as contact_name";
@@ -326,6 +330,8 @@ class LemonCRMInteraction extends CommonObject
 				$this->direction = $obj->direction;
 				$this->sentiment = $obj->sentiment;
 				$this->prospect_status = $obj->prospect_status;
+				$this->fk_parent = $obj->fk_parent;
+				$this->fk_project = $obj->fk_project;
 				$this->status = $obj->status;
 				$this->datec = $this->db->jdate($obj->datec);
 				$this->tms = $obj->tms;

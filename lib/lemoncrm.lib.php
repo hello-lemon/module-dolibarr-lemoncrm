@@ -160,3 +160,62 @@ function lemoncrm_thirdparty_prepare_head($object)
 	// Tabs are handled via module descriptor $this->tabs
 	return array();
 }
+
+/**
+ * Format a date in French (short or long)
+ *
+ * @param int|string $timestamp_or_string Timestamp or date string
+ * @param string $format 'short' or 'long'
+ * @return string Formatted date in French
+ */
+function lemoncrm_format_date_fr($timestamp_or_string, $format = 'short')
+{
+	$joursLong = array('Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi');
+	$joursCourt = array('Dim','Lun','Mar','Mer','Jeu','Ven','Sam');
+	$moisLong = array('','janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre');
+	$moisCourt = array('','jan','fév','mars','avr','mai','juin','juil','août','sept','oct','nov','déc');
+
+	if (is_numeric($timestamp_or_string)) {
+		$dt = new DateTime();
+		$dt->setTimestamp((int)$timestamp_or_string);
+	} else {
+		$dt = new DateTime($timestamp_or_string);
+	}
+
+	$w = (int)$dt->format('w');
+	$j = (int)$dt->format('j');
+	$n = (int)$dt->format('n');
+
+	if ($format === 'long') {
+		return $joursLong[$w].' '.$j.' '.$moisLong[$n];
+	}
+	return $joursCourt[$w].' '.$j.' '.$moisCourt[$n];
+}
+
+/**
+ * Return icon CSS classes for each interaction type
+ *
+ * @return array type_code => icon CSS class
+ */
+function lemoncrm_get_type_icons()
+{
+	return array(
+		'AC_TEL' => 'fas fa-phone-alt',
+		'AC_EMAIL' => 'fas fa-envelope',
+		'AC_LINKEDIN' => 'fas fa-share-alt',
+		'AC_TEAMS' => 'fas fa-video',
+		'AC_RDV' => 'far fa-calendar-check',
+		'AC_MEETING_INPERSON' => 'fas fa-users',
+		'AC_OTH' => 'far fa-comment',
+	);
+}
+
+/**
+ * Return call outcome labels
+ *
+ * @return array code => French label
+ */
+function lemoncrm_get_call_outcomes()
+{
+	return array('connected' => 'Joint', 'voicemail' => 'Messagerie', 'no_answer' => 'Pas de réponse', 'busy' => 'Occupé');
+}

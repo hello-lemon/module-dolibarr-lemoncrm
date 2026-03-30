@@ -24,6 +24,8 @@ CREATE TABLE llx_lemoncrm_interaction (
     direction         VARCHAR(16) DEFAULT 'OUT',
     sentiment         VARCHAR(64),
     prospect_status   VARCHAR(64),
+    fk_parent         INTEGER DEFAULT NULL,
+    fk_project        INTEGER DEFAULT NULL,
     status            SMALLINT DEFAULT 1,
     datec             DATETIME,
     tms               TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

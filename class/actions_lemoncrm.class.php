@@ -118,8 +118,28 @@ class ActionsLemonCRM
 		print 'var lcrm_base = '.json_encode(dol_buildpath('/lemoncrm/interaction_card.php', 1)).';';
 		print 'var lcrm_page_socid = '.(int)$socid.';';
 		print 'var lcrm_page_socname = '.json_encode($socName).';';
+		print 'var lcrm_dol_root = '.json_encode(DOL_URL_ROOT).';'."\n";
 		print '</script>';
 
+		return 0;
+	}
+
+	/**
+	 * Hook to declare lemoncrm_interaction element properties for linked objects
+	 */
+	public function getElementProperties($parameters, &$object, &$action, $hookmanager)
+	{
+		if (isset($parameters['elementType']) && $parameters['elementType'] === 'lemoncrm_interaction') {
+			$this->results = array(
+				'classpath' => '/lemoncrm/class',
+				'classfile' => 'lemoncrm_interaction',
+				'classname' => 'LemonCRMInteraction',
+				'module' => 'lemoncrm',
+				'subelement' => 'lemoncrm_interaction',
+				'table_element' => 'lemoncrm_interaction',
+			);
+			return 1;
+		}
 		return 0;
 	}
 }

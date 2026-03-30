@@ -19,6 +19,10 @@ $(function() {
 		h += '<span class="fa fa-comments"></span></button>';
 		h += '<div class="lcrm-quicklog-panel" id="lcrm-quicklog-panel">';
 		h += '<div class="lcrm-quicklog-context" id="lcrm-quicklog-ctx" style="display:none"><span class="fa fa-building-o"></span> <span id="lcrm-ctx-name"></span></div>';
+		h += '<div class="lcrm-quicklog-search">';
+		h += '<input type="text" id="lcrm-search-soc" placeholder="Changer de tiers" autocomplete="off" />';
+		h += '<div id="lcrm-search-results" style="display:none"></div>';
+		h += '</div>';
 		h += '<div class="lcrm-quicklog-title">NOUVELLE INTERACTION</div>';
 		for (var i = 0; i < types.length; i++) {
 			h += '<a href="#" class="lcrm-quicklog-item" data-type="' + types[i].code + '">';
@@ -31,60 +35,30 @@ $(function() {
 	var baseUrl = (typeof lcrm_base !== "undefined") ? lcrm_base : "/custom/lemoncrm/interaction_card.php";
 	var popupRef = null;
 
-	// Detect socid from current page (JS fallback when PHP hook doesn't run)
+	// Detect socid from current page
 	function lcrm_detect_socid() {
-		// 1. From PHP hook
-		if (typeof lcrm_page_socid !== "undefined" && lcrm_page_socid > 0) return lcrm_page_socid;
+		// 1. From PHP hook (authoritative: if defined, trust it even if 0)
+		if (typeof lcrm_page_socid !== "undefined") return lcrm_page_socid;
 
-		// 2. From URL params (socid, fk_soc)
+		// 2. From URL params (socid, fk_soc) - only if PHP hook didn't run
 		var params = new URLSearchParams(window.location.search);
 		var directId = params.get("socid") || params.get("fk_soc");
 		if (directId) return parseInt(directId);
 
-		// 3. Scan all links on the page for socid
-		var found = 0;
-		$("a[href]").each(function() {
-			if (found) return false;
-			var href = $(this).attr("href") || "";
-			// societe/card.php?socid=123
-			var m = href.match(/societe\/card\.php\?socid=(\d+)/);
-			if (m) { found = parseInt(m[1]); return false; }
-			// societe/card.php/123
-			var m2 = href.match(/societe\/card\.php\/(\d+)/);
-			if (m2) { found = parseInt(m2[1]); return false; }
-		});
-		if (found) return found;
-
-		// 4. Broader: any href containing socid= parameter
-		$("a[href*='socid=']").each(function() {
-			if (found) return false;
-			var m = ($(this).attr("href") || "").match(/socid=(\d+)/);
-			if (m) { found = parseInt(m[1]); return false; }
-		});
-		if (found) return found;
-
-		// 5. Tabs often use relative URLs, check tab links
-		$(".tabsElem a[href], .tabs a[href]").each(function() {
-			if (found) return false;
-			var href = $(this).attr("href") || "";
-			var m = href.match(/socid=(\d+)/);
-			if (m) { found = parseInt(m[1]); return false; }
-		});
-		if (found) return found;
-
 		return 0;
 	}
 
-	window.lcrm_open_drawer = function(type, socid, contactid) {
+	window.lcrm_open_drawer = function(type, socid, contactid, fk_parent) {
 		var s = socid || lcrm_detect_socid();
 		var c = contactid || 0;
 		var url = baseUrl + "?action=create&popup=1";
 		if (type) url += "&interaction_type=" + type;
 		if (s) url += "&socid=" + s;
 		if (c) url += "&contactid=" + c;
+		if (fk_parent) url += "&fk_parent=" + fk_parent;
 
 		// Position: right side of screen
-		var w = 420;
+		var w = 560;
 		var h = Math.min(750, screen.availHeight - 50);
 		var left = screen.availWidth - w - 10;
 		var top = 30;
@@ -154,5 +128,36 @@ $(function() {
 		if (!$(e.target).closest("#lcrm-quicklog").length) {
 			$("#lcrm-quicklog-panel").removeClass("open");
 		}
+	});
+
+	var searchTimer = null;
+	$(document).on("input", "#lcrm-search-soc", function() {
+		var term = $(this).val().trim();
+		clearTimeout(searchTimer);
+		if (term.length < 3) { $("#lcrm-search-results").hide().empty(); return; }
+		searchTimer = setTimeout(function() {
+			$.get(lcrm_dol_root + "/custom/lemoncrm/ajax/search_company.php", {term: term}, function(data) {
+				var $res = $("#lcrm-search-results").empty();
+				if (data && data.length) {
+					$.each(data, function(i, item) {
+						var $a = $('<a href="#" class="lcrm-search-item"></a>');
+					$a.attr('data-socid', item.id).attr('data-socname', item.name).text(item.name);
+					$res.append($a);
+					});
+					$res.show();
+				} else { $res.hide(); }
+			}, "json");
+		}, 300);
+	});
+
+	$(document).on("click", ".lcrm-search-item", function(e) {
+		e.preventDefault();
+		e.stopPropagation();
+		window.lcrm_page_socid = $(this).data("socid");
+		window.lcrm_page_socname = $(this).data("socname");
+		$("#lcrm-ctx-name").text(window.lcrm_page_socname);
+		$(".lcrm-quicklog-context").show();
+		$("#lcrm-search-soc").val("");
+		$("#lcrm-search-results").hide().empty();
 	});
 });

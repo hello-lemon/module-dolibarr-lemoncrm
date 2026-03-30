@@ -75,29 +75,39 @@ if ($action == 'add' && $user->hasRight('lemoncrm', 'interaction', 'write')) {
 		GETPOSTINT('date_interactionmonth'), GETPOSTINT('date_interactionday'), GETPOSTINT('date_interactionyear')
 	);
 	$object->duration_minutes = GETPOSTINT('duration_minutes');
-	$object->summary = GETPOST('summary', 'alphanohtml');
+	$object->summary = GETPOST('summary', 'restricthtml');
 	$object->followup_action = GETPOST('followup_action', 'restricthtml');
 	$object->followup_date = GETPOST('followup_date', 'alpha');
 	$object->followup_time = GETPOST('followup_time', 'alpha');
 	$object->followup_mode = GETPOST('followup_mode', 'alpha');
 	$object->sentiment = GETPOST('sentiment', 'alpha');
 	$object->prospect_status = GETPOST('prospect_status', 'alpha');
+	$fkParent = GETPOSTINT('fk_parent');
+	if ($fkParent > 0) {
+		// Keep flat: if parent is itself a child, use its parent instead
+		$parentCheck = new LemonCRMInteraction($db);
+		if ($parentCheck->fetch($fkParent) > 0 && $parentCheck->fk_parent > 0) {
+			$fkParent = $parentCheck->fk_parent;
+		}
+		$object->fk_parent = $fkParent;
+	}
 
 	// Call outcome stored in summary prefix
 	$call_outcome = GETPOST('call_outcome', 'alpha');
 	if (!empty($call_outcome) && $object->interaction_type == 'AC_TEL') {
-		$outcomeLabels = array('connected' => 'Joint', 'voicemail' => 'Messagerie', 'no_answer' => 'Pas de reponse', 'busy' => 'Occupe');
+		$outcomeLabels = lemoncrm_get_call_outcomes();
 		$prefix = '['.($outcomeLabels[$call_outcome] ?? $call_outcome).'] ';
 		if (strpos($object->summary, '[') !== 0) {
 			$object->summary = $prefix.$object->summary;
 		}
 	}
 
+	$formError = '';
 	if (empty($object->interaction_type)) {
-		setEventMessages('Choisis un type d\'interaction', null, 'errors');
+		$formError = 'Choisissez un type d\'interaction';
 		$action = 'create';
 	} elseif (empty($object->date_interaction)) {
-		setEventMessages('La date est obligatoire', null, 'errors');
+		$formError = 'La date est obligatoire';
 		$action = 'create';
 	} else {
 		$result = $object->create($user);
@@ -109,7 +119,7 @@ if ($action == 'add' && $user->hasRight('lemoncrm', 'interaction', 'write')) {
 				print '<div style="font-size:2em;margin-bottom:10px;">&#10003;</div>';
 				print '<div style="font-weight:600;">Interaction enregistr&eacute;e</div>';
 				print '</div>';
-				print '<script>setTimeout(function(){ window.close(); }, 800);</script>';
+				print '<script>if(window.opener){window.opener.postMessage("lcrm_saved","*");}setTimeout(function(){ window.close(); }, 800);</script>';
 				print '</body></html>';
 				exit;
 			}
@@ -121,7 +131,7 @@ if ($action == 'add' && $user->hasRight('lemoncrm', 'interaction', 'write')) {
 			header("Location: ".dol_buildpath('/lemoncrm/interaction_card.php', 1).'?id='.$result);
 			exit;
 		} else {
-			setEventMessages($object->error, $object->errors, 'errors');
+			$formError = $object->error;
 			$action = 'create';
 		}
 	}
@@ -142,7 +152,7 @@ if ($action == 'update' && $user->hasRight('lemoncrm', 'interaction', 'write')) 
 		GETPOSTINT('date_interactionmonth'), GETPOSTINT('date_interactionday'), GETPOSTINT('date_interactionyear')
 	);
 	$object->duration_minutes = GETPOSTINT('duration_minutes');
-	$object->summary = GETPOST('summary', 'alphanohtml');
+	$object->summary = GETPOST('summary', 'restricthtml');
 	$object->followup_action = GETPOST('followup_action', 'restricthtml');
 	$object->followup_date = GETPOST('followup_date', 'alpha');
 	$object->followup_time = GETPOST('followup_time', 'alpha');
@@ -152,11 +162,21 @@ if ($action == 'update' && $user->hasRight('lemoncrm', 'interaction', 'write')) 
 
 	$result = $object->update($user);
 	if ($result > 0) {
+		if ($popupMode || $drawerMode) {
+			print '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>';
+			print '<div style="padding:40px;text-align:center;font-family:sans-serif;">';
+			print '<div style="font-size:2em;margin-bottom:10px;">&#10003;</div>';
+			print '<div style="font-weight:600;">Interaction mise à jour</div>';
+			print '</div>';
+			print '<script>if(window.opener){window.opener.postMessage("lcrm_saved","*");}setTimeout(function(){ window.close(); }, 800);</script>';
+			print '</body></html>';
+			exit;
+		}
 		setEventMessages($langs->trans('InteractionUpdated'), null, 'mesgs');
 		header("Location: ".dol_buildpath('/lemoncrm/interaction_card.php', 1).'?id='.$object->id);
 		exit;
 	} else {
-		setEventMessages($object->error, $object->errors, 'errors');
+		$formError = $object->error;
 		$action = 'edit';
 	}
 }
@@ -208,42 +228,20 @@ $prospectStatusList = lemoncrm_load_dict($db, 'c_lemoncrm_prospect_status');
 
 $title = $langs->trans('InteractionCard');
 if ($drawerMode) {
-	// Minimal HTML for iframe mode - no Dolibarr chrome
-	print '<!DOCTYPE html><html><head>';
-	print '<meta charset="UTF-8">';
-	print '<meta name="viewport" content="width=device-width, initial-scale=1">';
-	// Load Dolibarr CSS
-	print '<link rel="stylesheet" href="'.DOL_URL_ROOT.'/theme/eldy/style.css.php">';
-	print '<link rel="stylesheet" href="'.dol_buildpath('/lemoncrm/css/lemoncrm.css', 1).'">';
-	print '<link rel="stylesheet" href="'.DOL_URL_ROOT.'/theme/common/fontawesome-5/css/all.min.css">';
-	print '<link rel="stylesheet" href="'.DOL_URL_ROOT.'/theme/common/fontawesome-5/css/v4-shims.min.css">';
-	print '<script src="'.DOL_URL_ROOT.'/includes/jquery/js/jquery.min.js"></script>';
-	print '<style>body { margin: 0; padding: 16px; background: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }';
-	print '.lcrm-error { background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; color: #991b1b; font-size: 0.88em; }';
-	print '</style>';
-	print '</head><body class="mod-lemoncrm page-card drawer-mode">';
-	// Show session messages as visible errors in popup mode
-	if (!empty($_SESSION['dol_events']['errors'])) {
-		foreach ($_SESSION['dol_events']['errors'] as $err) {
-			print '<div class="lcrm-error">'.$err.'</div>';
-		}
-		$_SESSION['dol_events']['errors'] = array();
-	}
+	// Popup mode: use llxHeader with hidden menus for full Dolibarr JS support (CKEditor etc.)
+	if (!defined('NOREQUIREMENU')) define('NOREQUIREMENU', 1);
+	$_GET['dol_hide_topmenu'] = 1;
+	$_GET['dol_hide_leftmenu'] = 1;
+	$_GET['mainmenu'] = 'lemon';
+	llxHeader('', $title, '', '', 0, 0, '', '', '', 'mod-lemoncrm page-card');
+	print '<style>#id-left{display:none!important}#id-right{margin:0!important}div.fiche{margin:8px!important}.side-nav{display:none!important}#tmenu_tooltip{display:none!important}</style>';
 } else {
 	$_GET['mainmenu'] = 'lemon';
 	$_GET['leftmenu'] = 'lemoncrm';
 	llxHeader('', $title, '', '', 0, 0, '', '', '', 'mod-lemoncrm page-card');
 }
 
-$typeIcons = array(
-	'AC_TEL' => 'fas fa-phone-alt',
-	'AC_EMAIL' => 'fas fa-envelope',
-	'AC_LINKEDIN' => 'fas fa-share-alt',
-	'AC_TEAMS' => 'fas fa-video',
-	'AC_RDV' => 'far fa-calendar-check',
-	'AC_MEETING_INPERSON' => 'fas fa-users',
-	'AC_OTH' => 'far fa-comment',
-);
+$typeIcons = lemoncrm_get_type_icons();
 $typeLabels = lemoncrm_get_interaction_types();
 $directions = lemoncrm_get_directions();
 $followup_modes = lemoncrm_get_followup_modes();
@@ -261,12 +259,28 @@ if ($action == 'create' || ($action == 'edit' && $id > 0)) {
 	$curDir = $isEdit ? $object->direction : (GETPOST('direction', 'aZ') ?: 'OUT');
 	$curDate = $isEdit ? $object->date_interaction : dol_now();
 	$curDuration = $isEdit ? $object->duration_minutes : GETPOSTINT('duration_minutes');
-	$curSummary = $isEdit ? $object->summary : GETPOST('summary', 'alphanohtml');
+	$curSummary = $isEdit ? $object->summary : GETPOST('summary', 'restricthtml');
 	$curFollowAction = $isEdit ? $object->followup_action : GETPOST('followup_action', 'restricthtml');
 	$curFollowDate = $isEdit ? $object->followup_date : GETPOST('followup_date', 'alpha');
 	$curFollowMode = $isEdit ? $object->followup_mode : GETPOST('followup_mode', 'alpha');
 	$curSentiment = $isEdit ? $object->sentiment : GETPOST('sentiment', 'alpha');
 	$curProspect = $isEdit ? $object->prospect_status : GETPOST('prospect_status', 'alpha');
+
+	// Thread parent
+	$curFkParent = $isEdit ? $object->fk_parent : GETPOSTINT('fk_parent');
+	$parentObj = null;
+	if ($curFkParent > 0) {
+		$parentObj = new LemonCRMInteraction($db);
+		if ($parentObj->fetch($curFkParent) <= 0) {
+			$parentObj = null;
+			$curFkParent = 0;
+		} else {
+			// Pre-fill thirdparty from parent if not set
+			if (empty($curSoc) && $parentObj->fk_soc > 0) {
+				$curSoc = $parentObj->fk_soc;
+			}
+		}
+	}
 
 	// Thirdparty name for display
 	$socName = '';
@@ -285,12 +299,17 @@ if ($action == 'create' || ($action == 'edit' && $id > 0)) {
 
 	print '<div class="lemoncrm-form">';
 
+	if (!empty($formError)) {
+		print '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;margin-bottom:12px;color:#991b1b;font-size:0.9em">'.$formError.'</div>';
+	}
+
 	print '<form method="POST" action="'.dol_escape_htmltag($_SERVER["PHP_SELF"]).'" id="lemoncrm-main-form">';
 	print '<input type="hidden" name="token" value="'.newToken().'">';
 	print '<input type="hidden" name="action" value="'.$formAction.'">';
 	if ($isEdit) print '<input type="hidden" name="id" value="'.$object->id.'">';
 	if ($drawerMode) print '<input type="hidden" name="drawer" value="1">';
 	if ($popupMode) print '<input type="hidden" name="popup" value="1">';
+	if ($curFkParent > 0) print '<input type="hidden" name="fk_parent" value="'.$curFkParent.'">';
 	// Direction: hidden with default, updated by JS if available
 	print '<input type="hidden" name="direction" id="h_direction" value="'.dol_escape_htmltag($curDir ?: 'OUT').'">';
 	print '<input type="hidden" name="sentiment" id="h_sentiment" value="'.dol_escape_htmltag($curSentiment).'">';
@@ -299,6 +318,17 @@ if ($action == 'create' || ($action == 'edit' && $id > 0)) {
 	print '<input type="hidden" name="call_outcome" id="h_call_outcome" value="">';
 
 	// ===== TIER 1 : Essential (always visible) =====
+
+	// Thread banner
+	if ($parentObj) {
+		$parentType = $typeLabels[$parentObj->interaction_type] ?? $parentObj->interaction_type;
+		$parentSummary = dol_trunc(str_replace(array("\r\n", "\n", "\r"), ' ', $parentObj->summary), 50);
+		print '<div class="lcrm-thread-banner">';
+		print '<span class="fas fa-link" style="margin-right:6px;color:#F7C948"></span>';
+		print 'Suite de <strong>'.$parentObj->ref.'</strong> : '.$parentType;
+		if ($parentSummary) print ' - '.dol_escape_htmltag($parentSummary);
+		print '</div>';
+	}
 
 	// Type pills (native radio buttons, no JS dependency)
 	print '<div class="lcrm-type-bar">';
@@ -316,6 +346,8 @@ if ($action == 'create' || ($action == 'edit' && $id > 0)) {
 	print '<div class="lcrm-context">';
 	print '<div class="lcrm-context-who">';
 	print $form->select_company($curSoc, 'fk_soc', '', 1, 0, 0, array(), 0, 'lcrm-select');
+	print '</div>';
+	print '<div class="lcrm-context-who" style="margin-top:6px;">';
 	print '<select name="fk_socpeople" id="fk_socpeople" class="lcrm-select">';
 	print '<option value="0">Contact...</option>';
 	if ($curSoc > 0) {
@@ -344,15 +376,16 @@ if ($action == 'create' || ($action == 'edit' && $id > 0)) {
 	print '<span class="lcrm-pill-label">Direction</span>';
 	print '<button type="button" class="lcrm-pill lcrm-dir'.($curDir == 'OUT' ? ' active' : '').'" data-dir="OUT"><span class="fa fa-arrow-up"></span> Sortant</button>';
 	print '<button type="button" class="lcrm-pill lcrm-dir'.($curDir == 'IN' ? ' active' : '').'" data-dir="IN"><span class="fa fa-arrow-down"></span> Entrant</button>';
-	print '<span class="lcrm-pill-sep"></span>';
+	print '</div>';
+	print '<div class="lcrm-pill-row" style="margin-top:6px">';
 	print '<span class="lcrm-pill-label">Issue</span>';
-	$outcomes = array('connected' => 'Joint', 'voicemail' => 'Messagerie', 'no_answer' => 'Pas de reponse', 'busy' => 'Occupe');
+	$outcomes = lemoncrm_get_call_outcomes();
 	foreach ($outcomes as $code => $label) {
 		print '<button type="button" class="lcrm-pill lcrm-outcome" data-outcome="'.$code.'">'.$label.'</button>';
 	}
 	print '</div>';
 	print '<div class="lcrm-field-inline">';
-	print '<span class="lcrm-pill-label">Duree</span>';
+	print '<span class="lcrm-pill-label">Durée</span>';
 	print '<input type="number" name="duration_minutes" value="'.(int)$curDuration.'" min="0" step="5" placeholder="min" class="lcrm-input-mini">';
 	print ' min';
 	print '</div>';
@@ -361,15 +394,15 @@ if ($action == 'create' || ($action == 'edit' && $id > 0)) {
 	// Email-specific: direction only
 	print '<div class="lcrm-adaptive-email" style="display:none">';
 	print '<div class="lcrm-pill-row">';
-	print '<button type="button" class="lcrm-pill lcrm-dir'.($curDir == 'OUT' ? ' active' : '').'" data-dir="OUT"><span class="fa fa-arrow-up"></span> Envoye</button>';
-	print '<button type="button" class="lcrm-pill lcrm-dir'.($curDir == 'IN' ? ' active' : '').'" data-dir="IN"><span class="fa fa-arrow-down"></span> Recu</button>';
+	print '<button type="button" class="lcrm-pill lcrm-dir'.($curDir == 'OUT' ? ' active' : '').'" data-dir="OUT"><span class="fa fa-arrow-up"></span> Envoyé</button>';
+	print '<button type="button" class="lcrm-pill lcrm-dir'.($curDir == 'IN' ? ' active' : '').'" data-dir="IN"><span class="fa fa-arrow-down"></span> Reçu</button>';
 	print '</div>';
 	print '</div>';
 
 	// Meeting-specific: duration
 	print '<div class="lcrm-adaptive-meeting" style="display:none">';
 	print '<div class="lcrm-field-inline">';
-	print '<span class="lcrm-pill-label">Duree</span>';
+	print '<span class="lcrm-pill-label">Durée</span>';
 	print '<input type="number" name="duration_minutes_meeting" value="'.(int)$curDuration.'" min="0" step="15" placeholder="min" class="lcrm-input-mini">';
 	print ' min';
 	print '</div>';
@@ -385,34 +418,16 @@ if ($action == 'create' || ($action == 'edit' && $id > 0)) {
 
 	print '</div>'; // adaptive
 
-	// Summary - WYSIWYG editor
+	// Summary - Dolibarr standard WYSIWYG editor
 	print '<div class="lcrm-summary">';
-	print '<div class="lcrm-editor-toolbar">';
-	print '<button type="button" class="lcrm-tb-btn" data-cmd="bold" title="Gras"><b>G</b></button>';
-	print '<button type="button" class="lcrm-tb-btn" data-cmd="italic" title="Italique"><i>I</i></button>';
-	print '<button type="button" class="lcrm-tb-btn" data-cmd="underline" title="Souligne"><u>S</u></button>';
-	print '<span class="lcrm-tb-sep"></span>';
-	print '<button type="button" class="lcrm-tb-btn" data-cmd="insertUnorderedList" title="Liste a puces"><span class="fas fa-list-ul"></span></button>';
-	print '<button type="button" class="lcrm-tb-btn" data-cmd="insertOrderedList" title="Liste numerotee"><span class="fas fa-list-ol"></span></button>';
-	print '<span class="lcrm-tb-sep"></span>';
-	print '<button type="button" class="lcrm-tb-btn" id="lcrm-expand-editor" title="Agrandir"><span class="fas fa-expand-alt"></span></button>';
-	print '</div>';
-	print '<div class="lcrm-editor" id="lcrm-editor" contenteditable="true" data-placeholder="Qu\'est-ce qui s\'est passe ?">';
-	// Convert stored text to HTML for editing
-	$htmlSummary = $curSummary;
-	$htmlSummary = str_replace(array('\r\n', '\n', '\r', "\\r\\n", "\\n", "\\r"), "\n", $htmlSummary);
-	if (strip_tags($htmlSummary) == $htmlSummary) {
-		// Plain text, convert newlines to <br>
-		$htmlSummary = nl2br(dol_escape_htmltag($htmlSummary));
-	}
-	print $htmlSummary;
-	print '</div>';
-	print '<textarea name="summary" id="lcrm-summary" style="display:none"></textarea>';
+	require_once DOL_DOCUMENT_ROOT.'/core/class/doleditor.class.php';
+	$doleditor = new DolEditor('summary', $curSummary, '', 120, 'dolibarr_notes', 'In', false, true, getDolGlobalInt('FCKEDITOR_ENABLE_SOCIETE'), ROWS_4, '100%');
+	print $doleditor->Create(1);
 	print '</div>';
 
 	// ===== TIER 2 : Details (expandable) =====
 	print '<div class="lcrm-details-toggle" id="lcrm-toggle-details">';
-	print '<span class="fa fa-chevron-down"></span> Plus de details';
+	print '<span class="fa fa-chevron-down"></span> Plus de détails';
 	print '</div>';
 
 	print '<div class="lcrm-details" id="lcrm-details" style="display:none">';
@@ -482,6 +497,8 @@ if ($action == 'create' || ($action == 'edit' && $id > 0)) {
 	print '</div>';
 	// Quick date shortcuts
 	print '<div class="lcrm-quick-dates">';
+	print '<button type="button" class="lcrm-quick-date" data-afternoon="1">Cet après-midi</button>';
+	print '<button type="button" class="lcrm-quick-date" data-hours="3">Dans 3h</button>';
 	print '<button type="button" class="lcrm-quick-date" data-days="1">Demain</button>';
 	print '<button type="button" class="lcrm-quick-date" data-days="3">Dans 3j</button>';
 	print '<button type="button" class="lcrm-quick-date" data-days="7">Dans 1 sem</button>';
@@ -492,7 +509,7 @@ if ($action == 'create' || ($action == 'edit' && $id > 0)) {
 	// ===== Submit =====
 	print '<div class="lcrm-submit">';
 	print '<button type="button" class="lcrm-btn-cancel" onclick="history.back()">Annuler</button>';
-	print '<button type="submit" class="lcrm-btn-save">'.($isEdit ? 'Enregistrer' : 'Enregistrer').'</button>';
+	print '<button type="submit" class="lcrm-btn-save">Enregistrer</button>';
 	print '</div>';
 
 	print '</form>';
@@ -503,7 +520,7 @@ if ($action == 'create' || ($action == 'edit' && $id > 0)) {
 	print '<div class="lcrm-modal">';
 	print '<div class="lcrm-modal-title">Ajouter une valeur</div>';
 	print '<input type="hidden" id="dict-type" value="">';
-	print '<div class="lcrm-field"><label class="lcrm-label">Libelle</label><input type="text" id="dict-label" class="lcrm-input" placeholder="Ex: Tres chaud"></div>';
+	print '<div class="lcrm-field"><label class="lcrm-label">Libellé</label><input type="text" id="dict-label" class="lcrm-input" placeholder="Ex: Très chaud"></div>';
 	print '<div class="lcrm-field"><label class="lcrm-label">Couleur</label><input type="color" id="dict-color" value="#6b7280" class="lcrm-input-color"></div>';
 	print '<div class="lcrm-modal-actions">';
 	print '<button type="button" class="lcrm-btn-cancel" id="dict-cancel">Annuler</button>';
@@ -516,39 +533,6 @@ if ($action == 'create' || ($action == 'edit' && $id > 0)) {
 	$ajaxUrl = dol_buildpath('/lemoncrm/ajax/dictionary.php', 1);
 	print '<script>
 $(function() {
-	// WYSIWYG toolbar
-	$(".lcrm-tb-btn").click(function(e) {
-		e.preventDefault();
-		document.execCommand($(this).data("cmd"), false, null);
-		$("#lcrm-editor").focus();
-	});
-
-	// Sync editor to hidden textarea before submit
-	$("form").on("submit", function() {
-		var html = $("#lcrm-editor").html();
-		// Convert to plain text with newlines for storage
-		var text = html.replace(/<br\s*\/?>/gi, "\n").replace(/<\/p>\s*<p[^>]*>/gi, "\n\n").replace(/<\/div>\s*<div[^>]*>/gi, "\n").replace(/<\/li>/gi, "\n").replace(/<li[^>]*>/gi, "- ").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
-		$("#lcrm-summary").val(text.trim());
-	});
-
-	// Expand/collapse editor
-	$("#lcrm-expand-editor").click(function(e) {
-		e.preventDefault();
-		var ed = $("#lcrm-editor");
-		if (ed.hasClass("lcrm-editor-expanded")) {
-			ed.removeClass("lcrm-editor-expanded").css("min-height", "100px").css("max-height", "400px");
-			$(this).find(".fas").removeClass("fa-compress-alt").addClass("fa-expand-alt");
-		} else {
-			ed.addClass("lcrm-editor-expanded").css("min-height", "300px").css("max-height", "none");
-			$(this).find(".fas").removeClass("fa-expand-alt").addClass("fa-compress-alt");
-		}
-	});
-
-	// Placeholder behavior for contenteditable
-	$("#lcrm-editor").on("focus blur input", function() {
-		$(this).toggleClass("empty", !$(this).text().trim());
-	}).trigger("blur");
-
 	var typeMap = {
 		AC_TEL: "call", AC_EMAIL: "email",
 		AC_LINKEDIN: "generic", AC_TEAMS: "meeting",
@@ -632,11 +616,23 @@ $(function() {
 	// Quick dates
 	$(".lcrm-quick-date").click(function() {
 		var d = new Date();
-		d.setDate(d.getDate() + parseInt($(this).data("days")));
-		var str = d.toISOString().substring(0, 10);
-		$("input[name=followup_date]").val(str);
 		$(".lcrm-quick-date").removeClass("active");
 		$(this).addClass("active");
+		if ($(this).data("afternoon")) {
+			$("input[name=followup_date]").val(d.toISOString().substring(0, 10));
+			$("input[name=followup_time]").val("14:00");
+			return;
+		}
+		if ($(this).data("hours")) {
+			d.setHours(d.getHours() + parseInt($(this).data("hours")));
+			$("input[name=followup_date]").val(d.toISOString().substring(0, 10));
+			$("input[name=followup_time]").val(String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0"));
+			return;
+		}
+		if ($(this).data("days")) {
+			d.setDate(d.getDate() + parseInt($(this).data("days")));
+			$("input[name=followup_date]").val(d.toISOString().substring(0, 10));
+		}
 	});
 
 	// Toggle sections
@@ -706,6 +702,13 @@ $(function() {
 			}
 		}, "json");
 	});
+
+	// Auto-set time to now for new interactions
+	if (!$("input[name=id]").length) {
+		var now = new Date();
+		$("select[name=date_interactionhour]").val(now.getHours());
+		$("select[name=date_interactionmin]").val(Math.floor(now.getMinutes() / 5) * 5);
+	}
 });
 </script>';
 }
@@ -816,7 +819,7 @@ elseif ($id > 0) {
 	}
 
 	// Created info
-	print '<div class="lcrm-view-created">Cree le '.dol_print_date($object->datec, 'dayhour').'</div>';
+	print '<div class="lcrm-view-created">Créé le '.dol_print_date($object->datec, 'dayhour').'</div>';
 
 	print '</div>'; // lemoncrm-form
 

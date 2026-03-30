@@ -927,3 +927,26 @@ tr.lemoncrm-done td {
 	.lcrm-row { flex-direction: column; }
 	.lcrm-pill-sep { display: none; }
 }
+
+/* Quicklog search */
+.lcrm-quicklog-search { padding: 4px 8px 8px; position: relative; }
+.lcrm-quicklog-search input { width: 100%; padding: 7px 10px; border: 1.5px solid #e5e7eb; border-radius: 6px; font-size: 0.85em; font-family: inherit; box-sizing: border-box; outline: none; }
+.lcrm-quicklog-search input:focus { border-color: #F7C948; }
+#lcrm-search-results { max-height: 200px; overflow-y: auto; background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; margin-top: 4px; }
+.lcrm-search-item { display: block; padding: 8px 10px; color: #374151; text-decoration: none; font-size: 0.85em; border-bottom: 1px solid #f3f4f6; }
+.lcrm-search-item:hover { background: #f9fafb; color: #111827; }
+.lcrm-quicklog-item { text-decoration: none !important; }
+.lcrm-quicklog-item:hover { text-decoration: none !important; }
+
+/* Thread styles - fond visible uniquement quand deplie, variable CSS Dolibarr */
+tr.lcrm-thread-open > td { background: var(--colorbacklinepairchecked) !important; }
+.lcrm-thread-banner { background: #FFFBEB; border: 1px solid #F7C948; border-radius: 8px; padding: 8px 14px; margin-bottom: 12px; font-size: 0.9em; color: #92400E; }
+.lcrm-chain-btn { color: #d1d5db; font-size: 0.9em; transition: color 0.15s; }
+.lcrm-chain-btn:hover { color: #F7C948; }
+/* Chevron: starts as fa-chevron-down (open), toggled via JS to fa-chevron-right (closed) */
+.lcrm-chevron { cursor: pointer; color: #9ca3af; font-size: 0.85em; }
+/* Toggle cell: entire td clickable */
+.lcrm-toggle-cell { cursor: pointer; text-align: center; }
+/* Message cell */
+.lcrm-msg-cell { cursor: pointer; }
+.lcrm-msg-preview { color: #374151; }
