@@ -480,7 +480,7 @@ if ($action == 'create' || ($action == 'edit' && $id > 0)) {
 	$curFollowTime = $isEdit ? $object->followup_time : GETPOST('followup_time', 'alpha');
 	print '<div style="display:flex;gap:8px;align-items:center;">';
 	print '<input type="date" name="followup_date" value="'.dol_escape_htmltag($curFollowDate).'" class="lcrm-input" style="flex:1;">';
-	print '<input type="time" name="followup_time" value="'.dol_escape_htmltag($curFollowTime).'" class="lcrm-input" style="width:110px;">';
+	print '<input type="time" name="followup_time" value="'.dol_escape_htmltag($curFollowTime ?: '09:00').'" step="900" class="lcrm-input" style="width:110px;">';
 	print '</div>';
 	print '</div>';
 	print '<div class="lcrm-field">';
@@ -625,13 +625,18 @@ $(function() {
 		}
 		if ($(this).data("hours")) {
 			d.setHours(d.getHours() + parseInt($(this).data("hours")));
+			var mins = Math.round(d.getMinutes() / 15) * 15;
+			if (mins === 60) { d.setHours(d.getHours() + 1); mins = 0; }
 			$("input[name=followup_date]").val(d.toISOString().substring(0, 10));
-			$("input[name=followup_time]").val(String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0"));
+			$("input[name=followup_time]").val(String(d.getHours()).padStart(2,"0") + ":" + String(mins).padStart(2,"0"));
 			return;
 		}
 		if ($(this).data("days")) {
 			d.setDate(d.getDate() + parseInt($(this).data("days")));
 			$("input[name=followup_date]").val(d.toISOString().substring(0, 10));
+			if (!$("input[name=followup_time]").val()) {
+				$("input[name=followup_time]").val("09:00");
+			}
 		}
 	});
 

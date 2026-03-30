@@ -19,6 +19,11 @@ require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
 dol_include_once('/lemoncrm/class/lemoncrm_interaction.class.php');
 dol_include_once('/lemoncrm/lib/lemoncrm.lib.php');
 
+// CSRF check
+if (GETPOST('token', 'alpha') != newToken()) {
+	accessforbidden('Bad CSRF token');
+}
+
 $type = GETPOST('type', 'alpha'); // propal, facture, projet
 $interactionId = GETPOSTINT('interaction_id');
 
@@ -50,12 +55,15 @@ $notePrivate .= "\n".$desc;
 if ($type === 'propal' && $user->hasRight('propal', 'creer')) {
 	require_once DOL_DOCUMENT_ROOT.'/comm/propal/class/propal.class.php';
 
+	$soc = new Societe($db);
+	$soc->fetch($interaction->fk_soc);
+
 	$propal = new Propal($db);
 	$propal->socid = $interaction->fk_soc;
 	$propal->date = dol_now();
 	$propal->duree_validite = 30;
-	$propal->cond_reglement_id = 1;
-	$propal->mode_reglement_id = 0;
+	$propal->cond_reglement_id = $soc->cond_reglement_id ?: 1;
+	$propal->mode_reglement_id = $soc->mode_reglement_id ?: 0;
 	$propal->note_private = $notePrivate;
 	$propal->entity = $conf->entity;
 
@@ -64,7 +72,7 @@ if ($type === 'propal' && $user->hasRight('propal', 'creer')) {
 		// Ajouter une ligne avec la description et la durée
 		$lineDesc = $desc;
 		$qty = $interaction->duration_minutes > 0 ? round($interaction->duration_minutes / 60, 2) : 1;
-		$propal->addline($lineDesc, 0, $qty, 20, 0, 0, 0, 0, '', '', 0, 0, 0, 'HT', 0, 1);
+		$propal->addline($lineDesc, 0, $qty, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 'HT', 0, 1);
 		// Lier l'interaction au devis
 		$propal->add_object_linked('lemoncrm_interaction', $interaction->id);
 		header('Location: '.DOL_URL_ROOT.'/comm/propal/card.php?id='.$result);
@@ -75,12 +83,17 @@ if ($type === 'propal' && $user->hasRight('propal', 'creer')) {
 } elseif ($type === 'facture' && $user->hasRight('facture', 'creer')) {
 	require_once DOL_DOCUMENT_ROOT.'/compta/facture/class/facture.class.php';
 
+	if (!isset($soc) || $soc->id != $interaction->fk_soc) {
+		$soc = new Societe($db);
+		$soc->fetch($interaction->fk_soc);
+	}
+
 	$facture = new Facture($db);
 	$facture->socid = $interaction->fk_soc;
 	$facture->date = dol_now();
 	$facture->type = Facture::TYPE_STANDARD;
-	$facture->cond_reglement_id = 1;
-	$facture->mode_reglement_id = 0;
+	$facture->cond_reglement_id = $soc->cond_reglement_id ?: 1;
+	$facture->mode_reglement_id = $soc->mode_reglement_id ?: 0;
 	$facture->note_private = $notePrivate;
 	$facture->entity = $conf->entity;
 
@@ -89,7 +102,7 @@ if ($type === 'propal' && $user->hasRight('propal', 'creer')) {
 		// Ajouter une ligne avec la description et la durée
 		$lineDesc = $desc;
 		$qty = $interaction->duration_minutes > 0 ? round($interaction->duration_minutes / 60, 2) : 1;
-		$facture->addline($lineDesc, 0, $qty, 20, 0, 0, 0, 0, '', '', 0, 0, 0, 'HT', 0, 1);
+		$facture->addline($lineDesc, 0, $qty, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 'HT', 0, 1);
 		// Lier l'interaction à la facture
 		$facture->add_object_linked('lemoncrm_interaction', $interaction->id);
 		header('Location: '.DOL_URL_ROOT.'/compta/facture/card.php?facid='.$result);

@@ -98,12 +98,3 @@ ConfirmDeleteInteraction = Êtes-vous sûr de vouloir supprimer cette interactio
 InteractionDeleted = Interaction supprimée
 InteractionCreated = Interaction créée
 InteractionUpdated = Interaction mise à jour
-
-# AI (Phase 2)
-LemonCRMAIApiKey = Clé API Claude (Anthropic)
-LemonCRMAIModel = Modèle IA
-AISuggest = Suggestion IA
-AIProspectSummary = Résumé prospect
-AISuggestFollowup = Suggestion de relance
-AIDraftEmail = Brouillon email
-AICallScript = Script d'appel

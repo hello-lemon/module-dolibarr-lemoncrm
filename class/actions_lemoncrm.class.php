@@ -101,7 +101,7 @@ class ActionsLemonCRM
 	{
 		global $conf, $user;
 
-		if (!$conf->lemoncrm->enabled || !$user->hasRight('lemoncrm', 'interaction', 'write')) {
+		if (empty($user->id) || !$conf->lemoncrm->enabled || !$user->hasRight('lemoncrm', 'interaction', 'write')) {
 			return 0;
 		}
 

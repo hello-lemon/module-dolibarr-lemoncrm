@@ -60,10 +60,7 @@ class modLemonCRM extends DolibarrModules
 		$this->conflictwith = array();
 		$this->langfiles = array("lemoncrm@lemoncrm");
 
-		$this->const = array(
-			array('LEMONCRM_AI_API_KEY', 'chaine', '', 'Cle API Anthropic Claude', 1, 'current', 0),
-			array('LEMONCRM_AI_MODEL', 'chaine', 'claude-sonnet-4-6', 'Modele IA par defaut', 1, 'current', 0),
-		);
+		$this->const = array();
 
 		if (!isset($conf->lemoncrm) || !isset($conf->lemoncrm->enabled)) {
 			$conf->lemoncrm = new stdClass();

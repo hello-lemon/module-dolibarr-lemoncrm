@@ -1,8 +1,10 @@
 /* LemonCRM - Global quick-log button + popup window */
 
 $(function() {
-	// Don't run inside popup
+	// Don't run inside popup or on login page
 	if (window.name === "lcrm_popup") return;
+	if (document.body.classList.contains("bodylogin")) return;
+	if (typeof lcrm_base === "undefined") return;
 
 	// Build quicklog button if not present
 	if (!document.getElementById("lcrm-quicklog")) {

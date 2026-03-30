@@ -70,6 +70,10 @@ if ($action === 'list' && $user->hasRight('lemoncrm', 'interaction', 'read')) {
 
 // Attach an interaction to a parent (set fk_parent)
 if ($action === 'attach' && $user->hasRight('lemoncrm', 'interaction', 'write')) {
+	if (GETPOST('token', 'alpha') != newToken()) {
+		echo json_encode(['error' => 'Bad CSRF token']);
+		exit;
+	}
 	$id = GETPOSTINT('id');
 	$parentId = GETPOSTINT('parent_id');
 
@@ -89,7 +93,7 @@ if ($action === 'attach' && $user->hasRight('lemoncrm', 'interaction', 'write'))
 	if ($db->query($sql)) {
 		echo json_encode(['success' => true, 'parent_id' => $parentId]);
 	} else {
-		echo json_encode(['error' => $db->lasterror()]);
+		echo json_encode(['error' => 'Erreur lors du rattachement']);
 	}
 	exit;
 }

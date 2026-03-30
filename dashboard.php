@@ -635,7 +635,7 @@ if ($num > 0) {
 		// Action links - row 1: business actions (only if thirdparty set)
 		if ($obj->fk_soc > 0) {
 			print '<div style="display:flex;gap:20px;align-items:center;border-top:1px solid #e5e7eb;padding-top:12px;font-size:1em">';
-			$createUrl = dol_buildpath('/lemoncrm/ajax/create_document.php', 1).'?interaction_id='.$obj->rowid;
+			$createUrl = dol_buildpath('/lemoncrm/ajax/create_document.php', 1).'?interaction_id='.$obj->rowid.'&token='.newToken();
 			if ($user->hasRight('propal', 'creer')) {
 				print '<a href="'.$createUrl.'&type=propal" style="color:#374151;text-decoration:none;font-weight:500"><span class="fas fa-file-signature" style="margin-right:5px;color:#6b7280"></span>Devis</a>';
 			}
@@ -807,7 +807,7 @@ $(function() {
 		e.preventDefault();
 		var parentId = $(this).data("parent");
 		var childId = $(this).data("child");
-		$.get("'.dol_buildpath('/lemoncrm/ajax/link_interaction.php', 1).'", {action: "attach", id: childId, parent_id: parentId}, function(data) {
+		$.get("'.dol_buildpath('/lemoncrm/ajax/link_interaction.php', 1).'", {action: "attach", id: childId, parent_id: parentId, token: "'.newToken().'"}, function(data) {
 			if (data.success) {
 				window.location.reload();
 			} else {
