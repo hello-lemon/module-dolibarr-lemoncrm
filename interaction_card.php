@@ -283,10 +283,10 @@ if ($action == 'create' || ($action == 'edit' && $id > 0)) {
 		if (empty($curContact)) {
 			$parts = explode(' ', $linkedinContact);
 			if (count($parts) >= 2) {
-				$sql2 = "SELECT rowid, fk_soc FROM ".MAIN_DB_PREFIX."socpeople WHERE";
+				$sql2 = "SELECT rowid, fk_soc FROM ".MAIN_DB_PREFIX."socpeople WHERE (";
 				$sql2 .= " (firstname LIKE '%".$db->escape($parts[0])."%' AND lastname LIKE '%".$db->escape($parts[count($parts)-1])."%')";
 				$sql2 .= " OR (firstname LIKE '%".$db->escape($parts[count($parts)-1])."%' AND lastname LIKE '%".$db->escape($parts[0])."%')";
-				$sql2 .= " AND entity = ".$conf->entity." LIMIT 1";
+				$sql2 .= ") AND entity = ".$conf->entity." LIMIT 1";
 				$resql2 = $db->query($sql2);
 				if ($resql2 && ($obj2 = $db->fetch_object($resql2))) {
 					$curContact = (int)$obj2->rowid;
