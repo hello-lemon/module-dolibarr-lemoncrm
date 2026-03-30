@@ -267,6 +267,36 @@ if ($action == 'create' || ($action == 'edit' && $id > 0)) {
 	$curDate = $isEdit ? $object->date_interaction : dol_now();
 	$curDuration = $isEdit ? $object->duration_minutes : GETPOSTINT('duration_minutes');
 	$curSummary = $isEdit ? $object->summary : GETPOST('summary', 'restricthtml');
+	// LinkedIn extension: pre-fill summary from URL param
+	if (!$isEdit && empty($curSummary) && GETPOST('linkedin_summary', 'restricthtml')) {
+		$curSummary = GETPOST('linkedin_summary', 'restricthtml');
+	}
+	// LinkedIn extension: try to match contact name to a thirdparty
+	if (!$isEdit && empty($curSoc) && GETPOST('linkedin_contact', 'alpha')) {
+		$linkedinContact = GETPOST('linkedin_contact', 'alpha');
+		$sql = "SELECT rowid FROM ".MAIN_DB_PREFIX."societe WHERE nom LIKE '%".$db->escape($linkedinContact)."%' AND entity = ".$conf->entity." LIMIT 1";
+		$resql = $db->query($sql);
+		if ($resql && ($obj = $db->fetch_object($resql))) {
+			$curSoc = (int)$obj->rowid;
+		}
+		// Also try contacts (socpeople)
+		if (empty($curContact)) {
+			$parts = explode(' ', $linkedinContact);
+			if (count($parts) >= 2) {
+				$sql2 = "SELECT rowid, fk_soc FROM ".MAIN_DB_PREFIX."socpeople WHERE";
+				$sql2 .= " (firstname LIKE '%".$db->escape($parts[0])."%' AND lastname LIKE '%".$db->escape($parts[count($parts)-1])."%')";
+				$sql2 .= " OR (firstname LIKE '%".$db->escape($parts[count($parts)-1])."%' AND lastname LIKE '%".$db->escape($parts[0])."%')";
+				$sql2 .= " AND entity = ".$conf->entity." LIMIT 1";
+				$resql2 = $db->query($sql2);
+				if ($resql2 && ($obj2 = $db->fetch_object($resql2))) {
+					$curContact = (int)$obj2->rowid;
+					if (empty($curSoc) && $obj2->fk_soc > 0) {
+						$curSoc = (int)$obj2->fk_soc;
+					}
+				}
+			}
+		}
+	}
 	$curFollowAction = $isEdit ? $object->followup_action : GETPOST('followup_action', 'restricthtml');
 	$curFollowDate = $isEdit ? $object->followup_date : GETPOST('followup_date', 'alpha');
 	$curFollowMode = $isEdit ? $object->followup_mode : GETPOST('followup_mode', 'alpha');
