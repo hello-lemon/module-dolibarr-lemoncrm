@@ -193,7 +193,7 @@ print '<div class="fichecenter"><div class="fichethirdleft">';
 
 // --- Pending followups ---
 print '<table class="noborder centpercent">';
-print '<tr class="liste_titre"><th colspan="4"><span class="fas fa-bell"></span> Relances à faire</th></tr>';
+print '<tr class="liste_titre"><th colspan="5"><span class="fas fa-bell"></span> Relances à faire</th></tr>';
 
 $sql = "SELECT i.rowid, i.ref, i.followup_action, i.followup_date, i.followup_mode, i.interaction_type,";
 $sql .= " s.nom as thirdparty_name, i.fk_soc";
@@ -205,7 +205,7 @@ $resql = $db->query($sql);
 if ($resql) {
 	$numf = $db->num_rows($resql);
 	if ($numf == 0) {
-		print '<tr class="oddeven"><td colspan="4" class="opacitymedium">Aucune relance en attente</td></tr>';
+		print '<tr class="oddeven"><td colspan="5" class="opacitymedium">Aucune relance en attente</td></tr>';
 	}
 	$socHelper = new Societe($db);
 	while ($obj = $db->fetch_object($resql)) {
@@ -227,6 +227,13 @@ if ($resql) {
 		if (!empty($obj->followup_mode)) print ' <small>('.($followup_modes[$obj->followup_mode] ?? '').')</small>';
 		print '</td>';
 		print '<td style="font-size:0.88em;color:#6b7280">'.dol_trunc(dol_escape_htmltag($obj->followup_action), 40).'</td>';
+		// Create task button
+		print '<td style="width:20px">';
+		if ($obj->fk_soc > 0) {
+			$taskUrl = dol_buildpath('/lemoncrm/ajax/create_document.php', 1).'?type=projet&interaction_id='.$obj->rowid.'&token='.newToken();
+			print '<a href="'.$taskUrl.'" title="Créer une tâche"><span class="fas fa-tasks" style="color:#6b7280"></span></a>';
+		}
+		print '</td>';
 		// Done button
 		print '<td style="width:20px">';
 		$doneUrl = $_SERVER["PHP_SELF"].'?action=followupdone&id='.$obj->rowid.'&token='.newToken();
@@ -242,7 +249,7 @@ print '</div><div class="fichetwothirdright">';
 
 // --- Open tasks ---
 print '<table class="noborder centpercent">';
-print '<tr class="liste_titre"><th colspan="4"><span class="fas fa-tasks"></span> Tâches en cours</th></tr>';
+print '<tr class="liste_titre"><th colspan="5"><span class="fas fa-tasks"></span> Tâches en cours</th></tr>';
 
 $sql = "SELECT t.rowid as task_id, t.ref as task_ref, t.label as task_label, t.dateo as date_start,";
 $sql .= " p.ref as project_ref, p.title as project_title,";
@@ -258,12 +265,15 @@ $resql = $db->query($sql);
 if ($resql) {
 	$numt = $db->num_rows($resql);
 	if ($numt == 0) {
-		print '<tr class="oddeven"><td colspan="4" class="opacitymedium">Aucune tâche en cours</td></tr>';
+		print '<tr class="oddeven"><td colspan="5" class="opacitymedium">Aucune tâche en cours</td></tr>';
 	}
 	while ($obj = $db->fetch_object($resql)) {
 		print '<tr class="oddeven">';
-		print '<td>'.dol_escape_htmltag(dol_trunc($obj->task_label, 30)).'</td>';
+		print '<td><a href="'.DOL_URL_ROOT.'/projet/tasks/task.php?id='.$obj->task_id.'">'.dol_escape_htmltag(dol_trunc($obj->task_label, 30)).'</a></td>';
 		print '<td style="color:#6b7280;font-size:0.9em">'.dol_escape_htmltag(dol_trunc($obj->thirdparty_name ?: $obj->project_ref, 20)).'</td>';
+		print '<td style="width:20px">';
+		print '<a href="'.DOL_URL_ROOT.'/projet/tasks/time.php?id='.$obj->task_id.'&action=createtime" title="Temps consommé"><span class="fas fa-stopwatch" style="color:#6b7280"></span></a>';
+		print '</td>';
 		print '<td style="width:20px">';
 		$closUrl = $_SERVER["PHP_SELF"].'?action=closetask&taskid='.$obj->task_id.'&token='.newToken();
 		if ($socid > 0) $closUrl .= '&socid='.$socid;
@@ -273,7 +283,7 @@ if ($resql) {
 	}
 }
 if ($taskCount > 7) {
-	print '<tr class="oddeven"><td colspan="3" class="center"><a href="'.DOL_URL_ROOT.'/projet/tasks/list.php?leftmenu=tasks">Voir les '.$taskCount.' tâches</a></td></tr>';
+	print '<tr class="oddeven"><td colspan="5" class="center"><a href="'.DOL_URL_ROOT.'/projet/tasks/list.php?leftmenu=tasks">Voir les '.$taskCount.' tâches</a></td></tr>';
 }
 print '</table>';
 
@@ -300,15 +310,17 @@ if (GETPOST('button_removefilter', 'alpha') || GETPOST('button_removefilter_x', 
 	$search_date_start = ''; $search_date_end = ''; $search_summary = ''; $search_direction = '';
 }
 
-$sql = "SELECT i.rowid, i.ref, i.interaction_type, i.fk_soc, i.fk_socpeople, i.fk_actioncomm,";
+$sql = "SELECT i.rowid, i.ref, i.interaction_type, i.fk_soc, i.fk_socpeople, i.fk_actioncomm, i.fk_user_author,";
 $sql .= " i.date_interaction, i.duration_minutes, i.direction, i.summary,";
 $sql .= " i.followup_date, i.followup_done, i.followup_action, i.followup_mode,";
 $sql .= " i.sentiment, i.prospect_status, i.fk_parent,";
 $sql .= " s.nom as thirdparty_name,";
-$sql .= " CONCAT(sp.firstname, ' ', sp.lastname) as contact_name";
+$sql .= " CONCAT(sp.firstname, ' ', sp.lastname) as contact_name,";
+$sql .= " CONCAT(u.firstname, ' ', u.lastname) as author_name";
 $sql .= " FROM ".MAIN_DB_PREFIX."lemoncrm_interaction as i";
 $sql .= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON i.fk_soc = s.rowid";
 $sql .= " LEFT JOIN ".MAIN_DB_PREFIX."socpeople as sp ON i.fk_socpeople = sp.rowid";
+$sql .= " LEFT JOIN ".MAIN_DB_PREFIX."user as u ON i.fk_user_author = u.rowid";
 $sql .= " WHERE i.entity = ".$conf->entity;
 if ($socid > 0) $sql .= " AND i.fk_soc = ".(int)$socid;
 if (!empty($search_type)) $sql .= " AND i.interaction_type = '".$db->escape($search_type)."'";
@@ -321,7 +333,9 @@ if ($search_followup == 'pending') $sql .= " AND i.followup_done = 0 AND i.follo
 elseif ($search_followup == 'overdue') $sql .= " AND i.followup_done = 0 AND i.followup_date < '".$db->escape($today)."'";
 elseif ($search_followup == 'done') $sql .= " AND i.followup_done = 1";
 // Thread grouping: parent first, then children by date
-$sql .= " ORDER BY COALESCE(i.fk_parent, i.rowid) DESC, i.fk_parent IS NOT NULL ASC, i.date_interaction ASC";
+// Thread grouping: group threads together, sort groups by most recent interaction
+$threadSortOrder = ($sortorder == 'ASC') ? 'ASC' : 'DESC';
+$sql .= " ORDER BY COALESCE(i.fk_parent, i.rowid) ".$threadSortOrder.", i.fk_parent IS NOT NULL ASC, i.date_interaction ASC";
 $sql .= " LIMIT ".$limit;
 
 $resql = $db->query($sql);
@@ -630,6 +644,9 @@ if ($num > 0) {
 		$dtObj = new DateTime(); $dtObj->setTimestamp($db->jdate($obj->date_interaction));
 		print ' à '.$dtObj->format('H:i');
 		print ' · <span style="color:#9ca3af">'.$obj->ref.'</span>';
+		if (!empty($obj->author_name) && trim($obj->author_name)) {
+			print ' · <span style="color:#9ca3af"><span class="fas fa-user-edit" style="margin-right:2px"></span>'.dol_escape_htmltag(trim($obj->author_name)).'</span>';
+		}
 		print '</div>';
 		// Summary
 		if (!empty($modalSummary)) {

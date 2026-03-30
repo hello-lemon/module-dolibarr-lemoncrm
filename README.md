@@ -7,7 +7,7 @@ Développé par [Lemon - Agence de communication](https://hellolemon.fr), Clermo
 ## Fonctionnalités
 
 ### Quicklog (bouton flottant)
-- Bouton jaune accessible sur toutes les pages Dolibarr
+- Bouton jaune accessible sur toutes les pages Dolibarr (sauf login)
 - Détecte automatiquement le tiers de la page courante
 - Recherche autocomplete pour changer de tiers
 - Ouvre un popup de saisie rapide d'interaction
@@ -16,31 +16,35 @@ Développé par [Lemon - Agence de communication](https://hellolemon.fr), Clermo
 - 7 types : Appel, Email, LinkedIn, Teams, RDV, Réunion, Note
 - Direction (entrant/sortant), durée, issue d'appel
 - Éditeur WYSIWYG Dolibarr (CKEditor) pour le résumé
+- Sélection du contact avec affichage contextuel (téléphone si appel, email si email)
+- Auto-sélection du contact unique
 - Sentiment et statut prospect (dictionnaires personnalisables)
 - Planification de suivi avec raccourcis (cet après-midi, dans 3h, demain, etc.)
 - Rattachement à un thread existant (fk_parent)
+- Affichage de l'auteur de l'interaction
 
 ### Dashboard
-- Statistiques : interactions de la semaine, relances en retard, jours sans contact, factures impayées
-- Tableau des relances à faire avec bouton "fait"
+- Statistiques : interactions de la semaine, relances en retard, jours sans contact, tâches en cours
+- Tableau des relances à faire avec boutons : créer une tâche, marquer comme fait
+- Tableau des tâches en cours avec boutons : saisir du temps, clôturer
 - Liste des interactions avec filtres (tiers, date, type, direction, texte libre, suivi)
-- Sélection multiple + suppression en masse (pattern Dolibarr standard)
+- Sélection multiple + suppression en masse
 
 ### Threads de conversation
 - Regroupement des interactions liées (modèle plat, 1 niveau)
-- Dernière interaction visible, chevron pour déplier les anciennes
+- Dernière interaction visible, clic pour déplier les anciennes
 - Bouton "Enchaîner" pour ajouter une suite
 - Bouton "Rattacher" pour lier une interaction après coup
-- Fond visuel sur le thread déplié (variable CSS Dolibarr)
 
 ### Modale de détail
 - Clic sur le message pour ouvrir une modale avec le détail complet
-- Retours à la ligne, contact, durée, tags
-- Actions directes :
-  - **Devis** : crée un devis brouillon pré-rempli (tiers + description + durée en heures)
+- Retours à la ligne, contact, durée, tags, auteur
+- Actions business :
+  - **Devis** : crée un devis brouillon pré-rempli (tiers, conditions paiement, description, durée)
   - **Facture** : crée une facture brouillon pré-remplie
   - **Tâche projet** : crée une tâche dans un projet du tiers
-  - **Temps consommé** : saisir du temps sur une tâche existante
+  - **Temps consommé** : saisir du temps sur une tâche existante (avec filtre de recherche)
+- Actions CRM :
   - **Modifier** : éditer l'interaction dans un popup
   - **Enchaîner** : créer une interaction liée
   - **Agenda** : lien vers l'événement dans l'agenda Dolibarr
@@ -50,6 +54,7 @@ Développé par [Lemon - Agence de communication](https://hellolemon.fr), Clermo
 ### Intégration Dolibarr
 - Double écriture : chaque interaction crée un événement dans l'agenda Dolibarr (ActionComm)
 - Objets liés : les devis/factures créés sont rattachés à l'interaction source
+- Création devis/facture avec conditions de paiement du tiers
 - Onglet CRM sur les fiches tiers
 - Menu "Lemon" dans la barre principale
 - Variables CSS Dolibarr pour le thème
@@ -87,23 +92,24 @@ mysql -u root dolibarr < /path/to/dolibarr/htdocs/custom/lemoncrm/sql/llx_lemonc
 ```
 lemoncrm/
 ├── ajax/
-│   ├── create_document.php    # Création devis/facture/projet depuis une interaction
-│   ├── dictionary.php         # CRUD dictionnaires (sentiment, statut prospect)
-│   ├── link_interaction.php   # Rattachement thread + listing tâches
-│   └── search_company.php     # Recherche tiers (autocomplete quicklog)
+│   ├── contact_info.php           # Infos contact (téléphone, email)
+│   ├── create_document.php        # Création devis/facture/projet depuis une interaction
+│   ├── dictionary.php             # CRUD dictionnaires (sentiment, statut prospect)
+│   ├── link_interaction.php       # Rattachement thread + listing tâches
+│   └── search_company.php         # Recherche tiers (autocomplete quicklog)
 ├── class/
 │   ├── actions_lemoncrm.class.php      # Hooks Dolibarr (footer, element properties)
 │   └── lemoncrm_interaction.class.php  # Classe métier interaction
 ├── core/modules/
-│   └── modLemonCRM.class.php  # Descripteur du module
+│   └── modLemonCRM.class.php      # Descripteur du module
 ├── css/
-│   └── lemoncrm.css           # Styles (quicklog, formulaire, dashboard, threads)
+│   └── lemoncrm.css               # Styles (quicklog, formulaire, dashboard, threads)
 ├── js/
-│   └── lemoncrm.js            # Quicklog panel + recherche tiers
+│   └── lemoncrm.js                # Quicklog panel + recherche tiers
 ├── langs/fr_FR/
-│   └── lemoncrm.lang          # Traductions françaises
+│   └── lemoncrm.lang              # Traductions françaises
 ├── lib/
-│   └── lemoncrm.lib.php       # Helpers (types, icônes, dates, onglets)
+│   └── lemoncrm.lib.php           # Helpers (types, icônes, dates, onglets)
 ├── sql/
 │   ├── data.sql                              # Données initiales (dictionnaires)
 │   ├── llx_lemoncrm_interaction.sql          # Table principale
@@ -111,10 +117,12 @@ lemoncrm/
 │   ├── llx_lemoncrm_interaction_v2.sql       # Migration v2 (threads + projets)
 │   ├── llx_c_lemoncrm_sentiment.sql          # Dictionnaire sentiments
 │   └── llx_c_lemoncrm_prospect_status.sql    # Dictionnaire statuts prospect
-├── dashboard.php              # Dashboard CRM unifié
-├── interaction_card.php       # Fiche interaction (création/édition/vue)
-├── interaction_list.php       # Liste des interactions
-└── index.php                  # Redirection vers dashboard
+├── admin/
+│   └── setup.php                  # Page de configuration
+├── dashboard.php                  # Dashboard CRM unifié
+├── interaction_card.php           # Fiche interaction (création/édition/vue)
+├── interaction_list.php           # Liste des interactions
+└── index.php                      # Redirection vers dashboard
 ```
 
 ## Licence

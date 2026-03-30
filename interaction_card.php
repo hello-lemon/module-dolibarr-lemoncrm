@@ -345,7 +345,9 @@ if ($action == 'create' || ($action == 'edit' && $id > 0)) {
 	// Context bar (who + when) - compact single line
 	print '<div class="lcrm-context">';
 	print '<div class="lcrm-context-who">';
-	print $form->select_company($curSoc, 'fk_soc', '', 1, 0, 0, array(), 0, 'lcrm-select');
+	$socEvents = array();
+	$socEvents[] = array('method' => 'getContacts', 'url' => dol_buildpath('/core/ajax/contacts.php?showempty=1&token='.currentToken(), 1), 'htmlname' => 'fk_socpeople', 'params' => array('add-resolve' => 'disabled'));
+	print $form->select_company($curSoc, 'fk_soc', '', 1, 0, 0, $socEvents, 0, 'lcrm-select');
 	print '</div>';
 	print '<div class="lcrm-context-who" style="margin-top:6px;">';
 	print '<select name="fk_socpeople" id="fk_socpeople" class="lcrm-select">';
@@ -651,21 +653,90 @@ $(function() {
 		$(this).toggleClass("open");
 	});
 
-	// Reload contacts on thirdparty change
-	$("#fk_soc").change(function() {
-		var socid = $(this).val();
+	// Contact reload handled by Dolibarr select_company events
+	/*function reloadContacts_disabled() {
+		var socid = $("#fk_soc").val() || $("[name=fk_soc]").val();
 		var sel = $("#fk_socpeople");
 		sel.empty().append(\'<option value="0">Contact...</option>\');
+		$("#lcrm-contact-info").remove();
 		if (socid > 0) {
 			$.get("'.DOL_URL_ROOT.'/contact/ajax/contacts.php", {socid: socid}, function(data) {
 				if (data && data.length) {
 					$.each(data, function(i, c) {
-						sel.append(\'<option value="\' + c.id + \'">\' + c.firstname + \' \' + c.lastname + \'</option>\');
+						sel.append(\'<option value="\' + c.id + \'" data-phone="\' + (c.phone_mobile || c.phone_perso || c.phone_pro || "") + \'" data-email="\' + (c.email || "") + \'">\' + c.firstname + \' \' + c.lastname + \'</option>\');
 					});
+					if (data.length === 1) {
+						sel.val(data[0].id).trigger("change");
+					}
 				}
 			}, "json");
 		}
+	}
+	// Bind to all possible events for thirdparty change
+	$(document).on("change", "#fk_soc", reloadContacts);
+	$(document).on("change", "[name=fk_soc]", reloadContacts);
+	*/
+
+	// Show contact info - disabled until contact reload works
+	/* (phone/email) when selecting a contact
+	$(document).on("change", "#fk_socpeople", function() {
+		$("#lcrm-contact-info").remove();
+		var opt = $(this).find("option:selected");
+		var phone = opt.data("phone") || "";
+		var email = opt.data("email") || "";
+		var curType = $("input[name=interaction_type]:checked").val() || "";
+		var info = "";
+		if (curType === "AC_TEL" && phone) {
+			info = \'<a href="tel:\' + phone + \'">\' + phone + \'</a>\';
+		} else if (curType === "AC_EMAIL" && email) {
+			info = \'<a href="mailto:\' + email + \'">\' + email + \'</a>\';
+		} else if (phone || email) {
+			if (phone) info += phone;
+			if (phone && email) info += " · ";
+			if (email) info += email;
+		}
+		if (info) {
+			$(this).after(\'<div id="lcrm-contact-info" style="margin-top:4px;font-size:0.85em;color:#6b7280">\' + info + \'</div>\');
+		}
+	*/
+
+	// Show contact info (phone/email) based on interaction type
+	$(document).on("change", "#fk_socpeople", function() {
+		$("#lcrm-contact-info").remove();
+		var contactId = $(this).val();
+		if (!contactId || contactId == "0") return;
+		$.get("'.dol_buildpath('/lemoncrm/ajax/contact_info.php', 1).'", {id: contactId}, function(data) {
+			if (!data) return;
+			var curType = $("input[name=interaction_type]:checked").val() || "";
+			var info = "";
+			var phone = data.phone_mobile || data.phone || data.phone_perso || "";
+			var email = data.email || "";
+			if ((curType === "AC_TEL" || curType === "AC_OTH") && phone) {
+				info = \'<a href="tel:\' + phone + \'" style="color:#374151">\' + phone + \'</a>\';
+			} else if (curType === "AC_EMAIL" && email) {
+				info = \'<a href="mailto:\' + email + \'" style="color:#374151">\' + email + \'</a>\';
+			} else {
+				var parts = [];
+				if (phone) parts.push(\'<a href="tel:\' + phone + \'" style="color:#374151">\' + phone + \'</a>\');
+				if (email) parts.push(\'<a href="mailto:\' + email + \'" style="color:#374151">\' + email + \'</a>\');
+				info = parts.join(" · ");
+			}
+			if (info) {
+				$("#fk_socpeople").after(\'<div id="lcrm-contact-info" style="margin-top:4px;font-size:0.88em;color:#6b7280">\' + info + \'</div>\');
+			}
+		}, "json");
 	});
+
+	// Auto-select first contact when list is refreshed + show info
+	var contactObserver = new MutationObserver(function() {
+		var sel = document.getElementById("fk_socpeople");
+		if (sel && sel.options.length === 2) {
+			sel.selectedIndex = 1;
+			$(sel).trigger("change");
+		}
+	});
+	var contactSel = document.getElementById("fk_socpeople");
+	if (contactSel) contactObserver.observe(contactSel, {childList: true});
 
 	// Sync duration fields
 	$("input[name=duration_minutes_meeting]").on("input", function() {
