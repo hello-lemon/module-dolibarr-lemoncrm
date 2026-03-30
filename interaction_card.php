@@ -344,7 +344,7 @@ if ($action == 'create' || ($action == 'edit' && $id > 0)) {
 		$checked = ($curType == $code) ? ' checked' : '';
 		print '<label class="lcrm-type-pill">';
 		print '<input type="radio" name="interaction_type" value="'.$code.'"'.$checked.'>';
-		print '<span class="fa '.$icon.'"></span><span class="lcrm-type-label">'.$label.'</span>';
+		print '<span class="'.$icon.'"></span><span class="lcrm-type-label">'.$label.'</span>';
 		print '</label>';
 	}
 	print '</div>';
@@ -450,7 +450,7 @@ if ($action == 'create' || ($action == 'edit' && $id > 0)) {
 		$active = ($curSentiment == $s['code']) ? ' active' : '';
 		$icon = $sentimentIcons[$s['code']] ?? 'fa-circle';
 		print '<button type="button" class="lcrm-pill lcrm-sentiment'.$active.'" data-code="'.$s['code'].'" style="--pill-color:'.$s['color'].'">';
-		print '<span class="fa '.$icon.'"></span> '.$s['label'];
+		print '<span class="'.$icon.'"></span> '.$s['label'];
 		print '</button>';
 	}
 	print '<button type="button" class="lcrm-pill lcrm-add-pill" data-dict="sentiment" title="Ajouter"><span class="fa fa-plus"></span></button>';
@@ -499,7 +499,7 @@ if ($action == 'create' || ($action == 'edit' && $id > 0)) {
 		if (empty($code)) continue;
 		$icon = $followupIcons[$code] ?? 'fa-comment';
 		$active = ($curFollowMode == $code) ? ' active' : '';
-		print '<button type="button" class="lcrm-pill lcrm-fmode'.$active.'" data-mode="'.$code.'"><span class="fa '.$icon.'"></span> '.$label.'</button>';
+		print '<button type="button" class="lcrm-pill lcrm-fmode'.$active.'" data-mode="'.$code.'"><span class="'.$icon.'"></span> '.$label.'</button>';
 	}
 	print '</div>';
 	print '</div>';

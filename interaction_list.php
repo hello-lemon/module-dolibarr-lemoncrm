@@ -309,7 +309,7 @@ while ($i < min($num, $limit)) {
 	print '<td>'.dol_print_date($db->jdate($obj->date_interaction), 'dayhour').'</td>';
 
 	// Type + direction
-	print '<td><span class="fa '.$icon.'" style="margin-right:5px;color:#6b7280"></span>'.$typeLabel.' '.$dirLabel.'</td>';
+	print '<td><span class="'.$icon.'" style="margin-right:5px;color:#6b7280"></span>'.$typeLabel.' '.$dirLabel.'</td>';
 
 	// Thirdparty (hidden if filtered by socid)
 	if (!$socid) {
