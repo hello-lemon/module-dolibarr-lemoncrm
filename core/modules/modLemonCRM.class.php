@@ -226,7 +226,7 @@ class modLemonCRM extends DolibarrModules
 		$sql[] = "INSERT IGNORE INTO ".MAIN_DB_PREFIX."c_actioncomm (id, code, type, libelle, module, active, position) VALUES (502, 'LCRM_LINKEDIN', 'module', 'LinkedIn', 'lemoncrm', 1, 30)";
 		$sql[] = "INSERT IGNORE INTO ".MAIN_DB_PREFIX."c_actioncomm (id, code, type, libelle, module, active, position) VALUES (503, 'LCRM_TEAMS', 'module', 'Teams', 'lemoncrm', 1, 40)";
 		$sql[] = "INSERT IGNORE INTO ".MAIN_DB_PREFIX."c_actioncomm (id, code, type, libelle, module, active, position) VALUES (504, 'LCRM_RDV', 'module', 'Rendez-vous', 'lemoncrm', 1, 50)";
-		$sql[] = "INSERT IGNORE INTO ".MAIN_DB_PREFIX."c_actioncomm (id, code, type, libelle, module, active, position) VALUES (505, 'LCRM_MEETING', 'module', 'RDV physique', 'lemoncrm', 1, 60)";
+		$sql[] = "INSERT IGNORE INTO ".MAIN_DB_PREFIX."c_actioncomm (id, code, type, libelle, module, active, position) VALUES (505, 'LCRM_WHATSAPP', 'module', 'WhatsApp', 'lemoncrm', 1, 55)";
 		$sql[] = "INSERT IGNORE INTO ".MAIN_DB_PREFIX."c_actioncomm (id, code, type, libelle, module, active, position) VALUES (506, 'LCRM_NOTE', 'module', 'Note', 'lemoncrm', 1, 100)";
 		$sql[] = "INSERT IGNORE INTO ".MAIN_DB_PREFIX."c_actioncomm (id, code, type, libelle, module, active, position) VALUES (507, 'LCRM_RELANCE', 'module', 'Relance', 'lemoncrm', 1, 70)";
 
@@ -236,7 +236,7 @@ class modLemonCRM extends DolibarrModules
 		$sql[] = "UPDATE ".MAIN_DB_PREFIX."lemoncrm_interaction SET interaction_type = 'LCRM_LINKEDIN' WHERE interaction_type = 'AC_LINKEDIN'";
 		$sql[] = "UPDATE ".MAIN_DB_PREFIX."lemoncrm_interaction SET interaction_type = 'LCRM_TEAMS' WHERE interaction_type = 'AC_TEAMS'";
 		$sql[] = "UPDATE ".MAIN_DB_PREFIX."lemoncrm_interaction SET interaction_type = 'LCRM_RDV' WHERE interaction_type = 'AC_RDV'";
-		$sql[] = "UPDATE ".MAIN_DB_PREFIX."lemoncrm_interaction SET interaction_type = 'LCRM_MEETING' WHERE interaction_type = 'AC_MEETING_INPERSON'";
+		$sql[] = "UPDATE ".MAIN_DB_PREFIX."lemoncrm_interaction SET interaction_type = 'LCRM_RDV' WHERE interaction_type = 'AC_MEETING_INPERSON'";
 		$sql[] = "UPDATE ".MAIN_DB_PREFIX."lemoncrm_interaction SET interaction_type = 'LCRM_NOTE' WHERE interaction_type = 'AC_OTH'";
 		$sql[] = "UPDATE ".MAIN_DB_PREFIX."lemoncrm_interaction SET interaction_type = 'LCRM_RELANCE' WHERE interaction_type = 'AC_RELANCE'";
 

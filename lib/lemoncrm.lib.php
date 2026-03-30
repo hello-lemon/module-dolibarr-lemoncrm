@@ -223,10 +223,10 @@ function lemoncrm_get_type_icons()
 	$defaults = array(
 		'LCRM_TEL' => 'fas fa-phone-alt',
 		'LCRM_EMAIL' => 'fas fa-envelope',
-		'LCRM_LINKEDIN' => 'fas fa-share-alt',
+		'LCRM_LINKEDIN' => 'fab fa-linkedin',
 		'LCRM_TEAMS' => 'fas fa-video',
 		'LCRM_RDV' => 'far fa-calendar-check',
-		'LCRM_MEETING' => 'fas fa-users',
+		'LCRM_WHATSAPP' => 'fab fa-whatsapp',
 		'LCRM_NOTE' => 'far fa-comment',
 		'LCRM_RELANCE' => 'fas fa-bell',
 	);

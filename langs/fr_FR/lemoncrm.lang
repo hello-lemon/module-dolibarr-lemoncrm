@@ -21,7 +21,7 @@ LCRM_EMAIL = Email
 LCRM_LINKEDIN = LinkedIn
 LCRM_TEAMS = Teams
 LCRM_RDV = Rendez-vous
-LCRM_MEETING = RDV physique
+LCRM_WHATSAPP = WhatsApp
 LCRM_NOTE = Note
 LCRM_RELANCE = Relance
 

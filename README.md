@@ -13,7 +13,7 @@ Développé par [Lemon - Agence de communication](https://hellolemon.fr), Clermo
 - Ouvre un popup de saisie rapide d'interaction
 
 ### Formulaire d'interaction
-- 8 types (préfixe LCRM_) : Appel, Email, LinkedIn, Teams, RDV, RDV physique, Note, Relance
+- 8 types (préfixe LCRM_) : Appel, Email, LinkedIn, Teams, RDV, WhatsApp, Note, Relance
 - Direction (entrant/sortant), durée, issue d'appel
 - Éditeur WYSIWYG Dolibarr (CKEditor) pour le résumé
 - Sélection du contact avec affichage contextuel (téléphone si appel, email si email)
@@ -93,7 +93,7 @@ mysql -u root dolibarr < /path/to/dolibarr/htdocs/custom/lemoncrm/sql/llx_lemonc
 Les types d'interaction du quicklog utilisent le préfixe `LCRM_` dans le dictionnaire Dolibarr :
 **Admin > Dictionnaires > Types d'événements de l'agenda**
 
-Types par défaut : LCRM_TEL, LCRM_EMAIL, LCRM_LINKEDIN, LCRM_TEAMS, LCRM_RDV, LCRM_MEETING, LCRM_NOTE, LCRM_RELANCE.
+Types par défaut : LCRM_TEL, LCRM_EMAIL, LCRM_LINKEDIN, LCRM_TEAMS, LCRM_RDV, LCRM_WHATSAPP, LCRM_NOTE, LCRM_RELANCE.
 
 Seuls les types avec le préfixe `LCRM_` apparaissent dans le quicklog. Les types standards de l'agenda Dolibarr (AC_TEL, AC_FAX, etc.) ne sont pas affichés.
 

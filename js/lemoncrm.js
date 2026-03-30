@@ -11,7 +11,7 @@ $(function() {
 		var types = (typeof lcrm_types !== "undefined" && lcrm_types.length) ? lcrm_types : [
 			{code: "LCRM_TEL", icon: "fas fa-phone-alt", label: "Appel"},
 			{code: "LCRM_EMAIL", icon: "fas fa-envelope", label: "Email"},
-			{code: "LCRM_LINKEDIN", icon: "fas fa-share-alt", label: "LinkedIn"},
+			{code: "LCRM_LINKEDIN", icon: "fab fa-linkedin", label: "LinkedIn"},
 			{code: "LCRM_TEAMS", icon: "fas fa-video", label: "Teams"},
 			{code: "LCRM_RDV", icon: "far fa-calendar-check", label: "RDV"},
 			{code: "LCRM_NOTE", icon: "far fa-comment", label: "Note"}
