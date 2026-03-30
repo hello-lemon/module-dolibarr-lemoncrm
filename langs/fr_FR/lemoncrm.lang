@@ -16,13 +16,14 @@ NewInteraction = Nouvelle interaction
 InteractionList = Liste des interactions
 
 # Interaction types
-AC_TEL = Appel téléphonique
-AC_EMAIL = Email
-AC_LINKEDIN = Message LinkedIn
-AC_TEAMS = Réunion Teams
-AC_RDV = Rendez-vous
-AC_MEETING_INPERSON = Rendez-vous physique
-AC_OTH = Autre
+LCRM_TEL = Appel
+LCRM_EMAIL = Email
+LCRM_LINKEDIN = LinkedIn
+LCRM_TEAMS = Teams
+LCRM_RDV = Rendez-vous
+LCRM_MEETING = RDV physique
+LCRM_NOTE = Note
+LCRM_RELANCE = Relance
 
 # Direction
 DirectionIN = Entrant

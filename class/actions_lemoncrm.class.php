@@ -99,11 +99,14 @@ class ActionsLemonCRM
 	 */
 	public function printCommonFooter($parameters, &$object, &$action, $hookmanager)
 	{
-		global $conf, $user;
+		global $conf, $user, $langs;
 
 		if (empty($user->id) || !$conf->lemoncrm->enabled || !$user->hasRight('lemoncrm', 'interaction', 'write')) {
 			return 0;
 		}
+
+		dol_include_once('/lemoncrm/lib/lemoncrm.lib.php');
+		$langs->load('lemoncrm@lemoncrm');
 
 		$socid = $this->detectSocidFromPage();
 		$socName = '';
@@ -113,12 +116,26 @@ class ActionsLemonCRM
 			if ($res && ($obj = $this->db->fetch_object($res))) $socName = $obj->nom;
 		}
 
+		// Build types array for JS quicklog
+		$types = lemoncrm_get_interaction_types();
+		$icons = lemoncrm_get_type_icons();
+		$jsTypes = array();
+		foreach ($types as $code => $label) {
+			$jsTypes[] = array(
+				'code' => $code,
+				'icon' => $icons[$code] ?? 'far fa-comment',
+				'label' => $label,
+			);
+		}
+
 		// Pass context to JS (the JS file handles the rest)
 		print '<script>';
 		print 'var lcrm_base = '.json_encode(dol_buildpath('/lemoncrm/interaction_card.php', 1)).';';
 		print 'var lcrm_page_socid = '.(int)$socid.';';
 		print 'var lcrm_page_socname = '.json_encode($socName).';';
-		print 'var lcrm_dol_root = '.json_encode(DOL_URL_ROOT).';'."\n";
+		print 'var lcrm_dol_root = '.json_encode(DOL_URL_ROOT).';';
+		print 'var lcrm_types = '.json_encode($jsTypes).';';
+		print 'var lcrm_persist = '.getDolGlobalInt('LEMONCRM_QUICKLOG_PERSIST', 0).';'."\n";
 		print '</script>';
 
 		return 0;

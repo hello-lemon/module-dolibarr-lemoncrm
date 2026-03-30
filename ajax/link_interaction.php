@@ -70,6 +70,11 @@ if ($action === 'list' && $user->hasRight('lemoncrm', 'interaction', 'read')) {
 
 // Attach an interaction to a parent (set fk_parent)
 if ($action === 'attach' && $user->hasRight('lemoncrm', 'interaction', 'write')) {
+	if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+		http_response_code(405);
+		echo json_encode(['error' => 'Method not allowed']);
+		exit;
+	}
 	if (GETPOST('token', 'alpha') != newToken()) {
 		echo json_encode(['error' => 'Bad CSRF token']);
 		exit;

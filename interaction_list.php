@@ -62,6 +62,12 @@ if (GETPOST('button_removefilter_x', 'alpha') || GETPOST('button_removefilter.x'
 
 // Delete
 if (GETPOST('action', 'alpha') == 'delete' && $user->hasRight('lemoncrm', 'interaction', 'delete')) {
+	if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+		accessforbidden('Method not allowed');
+	}
+	if (GETPOST('token', 'alpha') != newToken()) {
+		accessforbidden('Bad value for CSRF token');
+	}
 	$delId = GETPOSTINT('id');
 	if ($delId > 0) {
 		$delObj = new LemonCRMInteraction($db);
@@ -129,6 +135,7 @@ if ($contactobj && !$thirdparty) {
 }
 
 $types = lemoncrm_get_interaction_types();
+$typesAll = lemoncrm_get_interaction_types(false);
 
 // Build SQL
 $sql = "SELECT i.rowid, i.ref, i.interaction_type, i.fk_soc, i.fk_socpeople,";
@@ -282,12 +289,12 @@ while ($i < min($num, $limit)) {
 	}
 	if ($obj->followup_done) $rowclass = 'oddeven lemoncrm-done';
 
-	$typeLabel = $types[$obj->interaction_type] ?? $obj->interaction_type;
+	$typeLabel = $typesAll[$obj->interaction_type] ?? $obj->interaction_type;
 	$typeIcon = array(
-		'AC_TEL' => 'fas fa-phone-alt', 'AC_EMAIL' => 'fas fa-envelope',
-		'AC_LINKEDIN' => 'fas fa-share-alt', 'AC_TEAMS' => 'fas fa-video',
-		'AC_RDV' => 'far fa-calendar-check', 'AC_MEETING_INPERSON' => 'fas fa-users',
-		'AC_OTH' => 'far fa-comment',
+		'LCRM_TEL' => 'fas fa-phone-alt', 'LCRM_EMAIL' => 'fas fa-envelope',
+		'LCRM_LINKEDIN' => 'fas fa-share-alt', 'LCRM_TEAMS' => 'fas fa-video',
+		'LCRM_RDV' => 'far fa-calendar-check', 'LCRM_MEETING' => 'fas fa-users',
+		'LCRM_NOTE' => 'far fa-comment',
 	);
 	$icon = $typeIcon[$obj->interaction_type] ?? 'far fa-comment';
 	$dirLabel = ($obj->direction == 'IN') ? '<span class="badge badge-status4" style="font-size:0.75em">IN</span>' : '<span class="badge badge-status1" style="font-size:0.75em">OUT</span>';
@@ -376,10 +383,16 @@ while ($i < min($num, $limit)) {
 		print ' <a href="'.$editUrl.'" title="Modifier" style="margin-left:8px"><span class="fas fa-pencil-alt" style="color:#6b7280;font-size:0.85em"></span></a>';
 	}
 	if ($user->hasRight('lemoncrm', 'interaction', 'delete')) {
-		$delUrl = $_SERVER["PHP_SELF"].'?action=delete&id='.$obj->rowid.'&token='.newToken();
-		if ($socid > 0) $delUrl .= '&socid='.$socid;
-		if ($contactid > 0) $delUrl .= '&contactid='.$contactid;
-		print ' <a href="'.$delUrl.'" title="Supprimer" onclick="return confirm(\'Supprimer cette interaction ?\')"><span class="fas fa-trash-alt" style="color:#ef4444;font-size:0.85em"></span></a>';
+		print ' <form method="POST" action="'.$_SERVER["PHP_SELF"].'" style="display:inline" onsubmit="return confirm(\'Supprimer cette interaction ?\')">';
+		print '<input type="hidden" name="token" value="'.newToken().'">';
+		print '<input type="hidden" name="action" value="delete">';
+		print '<input type="hidden" name="id" value="'.$obj->rowid.'">';
+		if ($socid > 0) print '<input type="hidden" name="socid" value="'.$socid.'">';
+		if ($contactid > 0) print '<input type="hidden" name="contactid" value="'.$contactid.'">';
+		print '<button type="submit" title="Supprimer" style="border:0;background:transparent;padding:0;cursor:pointer">';
+		print '<span class="fas fa-trash-alt" style="color:#ef4444;font-size:0.85em"></span>';
+		print '</button>';
+		print '</form>';
 	}
 	print '</div>';
 

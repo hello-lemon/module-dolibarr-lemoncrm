@@ -13,7 +13,7 @@ Développé par [Lemon - Agence de communication](https://hellolemon.fr), Clermo
 - Ouvre un popup de saisie rapide d'interaction
 
 ### Formulaire d'interaction
-- 7 types : Appel, Email, LinkedIn, Teams, RDV, Réunion, Note
+- 8 types (préfixe LCRM_) : Appel, Email, LinkedIn, Teams, RDV, RDV physique, Note, Relance
 - Direction (entrant/sortant), durée, issue d'appel
 - Éditeur WYSIWYG Dolibarr (CKEditor) pour le résumé
 - Sélection du contact avec affichage contextuel (téléphone si appel, email si email)
@@ -86,6 +86,27 @@ chown -R www-data:www-data /path/to/dolibarr/htdocs/custom/lemoncrm
 # Exécuter la migration v2 (ajout threads + projets)
 mysql -u root dolibarr < /path/to/dolibarr/htdocs/custom/lemoncrm/sql/llx_lemoncrm_interaction_v2.sql
 ```
+
+## Configuration
+
+### Types d'interaction
+Les types d'interaction du quicklog utilisent le préfixe `LCRM_` dans le dictionnaire Dolibarr :
+**Admin > Dictionnaires > Types d'événements de l'agenda**
+
+Types par défaut : LCRM_TEL, LCRM_EMAIL, LCRM_LINKEDIN, LCRM_TEAMS, LCRM_RDV, LCRM_MEETING, LCRM_NOTE, LCRM_RELANCE.
+
+Seuls les types avec le préfixe `LCRM_` apparaissent dans le quicklog. Les types standards de l'agenda Dolibarr (AC_TEL, AC_FAX, etc.) ne sont pas affichés.
+
+Pour masquer un type, désactivez-le dans le dictionnaire. Pour ajouter un nouveau type, créez-le avec un code commençant par `LCRM_` (ex: LCRM_WHATSAPP).
+
+### Sentiments et statuts prospect
+Ces deux dictionnaires sont propres à LemonCRM et gérés dans :
+**Admin > Dictionnaires > Sentiments CRM / Statuts prospect CRM**
+
+### Apparence
+Dans **Admin > LemonCRM > Configuration** :
+- Nom et icône du menu principal (par défaut : "Lemon" avec fa-lemon)
+- Comportement du tiers dans le quicklog (page prime ou persistant)
 
 ## Structure du module
 

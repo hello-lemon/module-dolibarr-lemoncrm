@@ -94,7 +94,7 @@ if ($action == 'add' && $user->hasRight('lemoncrm', 'interaction', 'write')) {
 
 	// Call outcome stored in summary prefix
 	$call_outcome = GETPOST('call_outcome', 'alpha');
-	if (!empty($call_outcome) && $object->interaction_type == 'AC_TEL') {
+	if (!empty($call_outcome) && $object->interaction_type == 'LCRM_TEL') {
 		$outcomeLabels = lemoncrm_get_call_outcomes();
 		$prefix = '['.($outcomeLabels[$call_outcome] ?? $call_outcome).'] ';
 		if (strpos($object->summary, '[') !== 0) {
@@ -183,6 +183,12 @@ if ($action == 'update' && $user->hasRight('lemoncrm', 'interaction', 'write')) 
 
 // Delete
 if ($action == 'confirm_delete' && $confirm == 'yes' && $user->hasRight('lemoncrm', 'interaction', 'delete')) {
+	if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+		accessforbidden('Method not allowed');
+	}
+	if (GETPOST('token', 'alpha') != newToken()) {
+		accessforbidden('Bad value for CSRF token');
+	}
 	$result = $object->delete($user);
 	if ($result > 0) {
 		setEventMessages($langs->trans('InteractionDeleted'), null, 'mesgs');
@@ -242,7 +248,8 @@ if ($drawerMode) {
 }
 
 $typeIcons = lemoncrm_get_type_icons();
-$typeLabels = lemoncrm_get_interaction_types();
+$typeLabels = lemoncrm_get_interaction_types(); // active (form)
+$typeLabelsAll = lemoncrm_get_interaction_types(false); // all (display)
 $directions = lemoncrm_get_directions();
 $followup_modes = lemoncrm_get_followup_modes();
 
@@ -321,7 +328,7 @@ if ($action == 'create' || ($action == 'edit' && $id > 0)) {
 
 	// Thread banner
 	if ($parentObj) {
-		$parentType = $typeLabels[$parentObj->interaction_type] ?? $parentObj->interaction_type;
+		$parentType = $typeLabelsAll[$parentObj->interaction_type] ?? $parentObj->interaction_type;
 		$parentSummary = dol_trunc(str_replace(array("\r\n", "\n", "\r"), ' ', $parentObj->summary), 50);
 		print '<div class="lcrm-thread-banner">';
 		print '<span class="fas fa-link" style="margin-right:6px;color:#F7C948"></span>';
@@ -536,9 +543,9 @@ if ($action == 'create' || ($action == 'edit' && $id > 0)) {
 	print '<script>
 $(function() {
 	var typeMap = {
-		AC_TEL: "call", AC_EMAIL: "email",
-		AC_LINKEDIN: "generic", AC_TEAMS: "meeting",
-		AC_RDV: "meeting", AC_MEETING_INPERSON: "meeting", AC_OTH: "generic"
+		LCRM_TEL: "call", LCRM_EMAIL: "email",
+		LCRM_LINKEDIN: "generic", LCRM_TEAMS: "meeting",
+		LCRM_RDV: "meeting", LCRM_MEETING: "meeting", LCRM_NOTE: "generic"
 	};
 
 	function showAdaptive(type) {
@@ -686,9 +693,9 @@ $(function() {
 		var email = opt.data("email") || "";
 		var curType = $("input[name=interaction_type]:checked").val() || "";
 		var info = "";
-		if (curType === "AC_TEL" && phone) {
+		if (curType === "LCRM_TEL" && phone) {
 			info = \'<a href="tel:\' + phone + \'">\' + phone + \'</a>\';
-		} else if (curType === "AC_EMAIL" && email) {
+		} else if (curType === "LCRM_EMAIL" && email) {
 			info = \'<a href="mailto:\' + email + \'">\' + email + \'</a>\';
 		} else if (phone || email) {
 			if (phone) info += phone;
@@ -711,9 +718,9 @@ $(function() {
 			var info = "";
 			var phone = data.phone_mobile || data.phone || data.phone_perso || "";
 			var email = data.email || "";
-			if ((curType === "AC_TEL" || curType === "AC_OTH") && phone) {
+			if ((curType === "LCRM_TEL" || curType === "LCRM_NOTE") && phone) {
 				info = \'<a href="tel:\' + phone + \'" style="color:#374151">\' + phone + \'</a>\';
-			} else if (curType === "AC_EMAIL" && email) {
+			} else if (curType === "LCRM_EMAIL" && email) {
 				info = \'<a href="mailto:\' + email + \'" style="color:#374151">\' + email + \'</a>\';
 			} else {
 				var parts = [];
@@ -805,7 +812,7 @@ elseif ($id > 0) {
 		);
 	}
 
-	$typeLabel = $typeLabels[$object->interaction_type] ?? $object->interaction_type;
+	$typeLabel = $typeLabelsAll[$object->interaction_type] ?? $object->interaction_type;
 	$typeIcon = $typeIcons[$object->interaction_type] ?? 'fa-comment-o';
 	$dirLabel = $directions[$object->direction] ?? $object->direction;
 
@@ -908,7 +915,7 @@ elseif ($id > 0) {
 		}
 	}
 	if ($user->hasRight('lemoncrm', 'interaction', 'delete')) {
-		print '<a class="butActionDelete" href="'.$_SERVER["PHP_SELF"].'?id='.$object->id.'&action=delete&token='.newToken().'">'.$langs->trans('Delete').'</a>';
+		print '<a class="butActionDelete" href="'.$_SERVER["PHP_SELF"].'?id='.$object->id.'&action=delete">'.$langs->trans('Delete').'</a>';
 	}
 	print '</div>';
 }

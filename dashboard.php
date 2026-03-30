@@ -30,8 +30,17 @@ if (!$user->hasRight('lemoncrm', 'interaction', 'read')) {
 $socid = GETPOSTINT('socid');
 $contactid = GETPOSTINT('contactid');
 
+// Reject non-POST for write actions on this page
+$action_page = GETPOST('action', 'alpha');
+if (in_array($action_page, array('closetask', 'followupdone', 'delete'), true) && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+	accessforbidden('Method not allowed');
+}
+
 // Close task (set progress to 100% + status closed)
-if (GETPOST('action', 'alpha') == 'closetask' && $user->hasRight('projet', 'creer')) {
+if ($action_page == 'closetask' && $user->hasRight('projet', 'creer')) {
+	if (GETPOST('token', 'alpha') != newToken()) {
+		accessforbidden('Bad value for CSRF token');
+	}
 	$taskId = GETPOSTINT('taskid');
 	if ($taskId > 0) {
 		require_once DOL_DOCUMENT_ROOT.'/projet/class/task.class.php';
@@ -50,7 +59,10 @@ if (GETPOST('action', 'alpha') == 'closetask' && $user->hasRight('projet', 'cree
 }
 
 // Mark followup as done
-if (GETPOST('action', 'alpha') == 'followupdone' && $user->hasRight('lemoncrm', 'interaction', 'write')) {
+if ($action_page == 'followupdone' && $user->hasRight('lemoncrm', 'interaction', 'write')) {
+	if (GETPOST('token', 'alpha') != newToken()) {
+		accessforbidden('Bad value for CSRF token');
+	}
 	$doneId = GETPOSTINT('id');
 	if ($doneId > 0) {
 		$doneObj = new LemonCRMInteraction($db);
@@ -65,7 +77,10 @@ if (GETPOST('action', 'alpha') == 'followupdone' && $user->hasRight('lemoncrm', 
 }
 
 // Delete action (single)
-if (GETPOST('action', 'alpha') == 'delete' && $user->hasRight('lemoncrm', 'interaction', 'delete')) {
+if ($action_page == 'delete' && $user->hasRight('lemoncrm', 'interaction', 'delete')) {
+	if (GETPOST('token', 'alpha') != newToken()) {
+		accessforbidden('Bad value for CSRF token');
+	}
 	$delId = GETPOSTINT('id');
 	if ($delId > 0) {
 		$delObj = new LemonCRMInteraction($db);
@@ -124,7 +139,8 @@ $now = dol_now();
 $today = date('Y-m-d');
 $weekStart = date('Y-m-d', strtotime('monday this week'));
 
-$types = lemoncrm_get_interaction_types();
+$types = lemoncrm_get_interaction_types(); // active only (filters, quicklog)
+$typesAll = lemoncrm_get_interaction_types(false); // all (display)
 $typeIcons = lemoncrm_get_type_icons();
 $followup_modes = lemoncrm_get_followup_modes();
 
@@ -236,9 +252,15 @@ if ($resql) {
 		print '</td>';
 		// Done button
 		print '<td style="width:20px">';
-		$doneUrl = $_SERVER["PHP_SELF"].'?action=followupdone&id='.$obj->rowid.'&token='.newToken();
-		if ($socid > 0) $doneUrl .= '&socid='.$socid;
-		print '<a href="'.$doneUrl.'" title="Marquer comme fait"><span class="fas fa-check" style="color:#38A169"></span></a>';
+		print '<form method="POST" action="'.$_SERVER["PHP_SELF"].'" style="display:inline" onsubmit="return confirm(\'Marquer cette relance comme faite ?\')">';
+		print '<input type="hidden" name="token" value="'.newToken().'">';
+		print '<input type="hidden" name="action" value="followupdone">';
+		print '<input type="hidden" name="id" value="'.$obj->rowid.'">';
+		if ($socid > 0) print '<input type="hidden" name="socid" value="'.$socid.'">';
+		print '<button type="submit" title="Marquer comme fait" style="border:0;background:transparent;padding:0;cursor:pointer">';
+		print '<span class="fas fa-check" style="color:#38A169"></span>';
+		print '</button>';
+		print '</form>';
 		print '</td>';
 		print '</tr>';
 	}
@@ -275,9 +297,15 @@ if ($resql) {
 		print '<a href="'.DOL_URL_ROOT.'/projet/tasks/time.php?id='.$obj->task_id.'&action=createtime" title="Temps consommé"><span class="fas fa-stopwatch" style="color:#6b7280"></span></a>';
 		print '</td>';
 		print '<td style="width:20px">';
-		$closUrl = $_SERVER["PHP_SELF"].'?action=closetask&taskid='.$obj->task_id.'&token='.newToken();
-		if ($socid > 0) $closUrl .= '&socid='.$socid;
-		print '<a href="'.$closUrl.'" title="Terminer" onclick="return confirm(\'Terminer cette tâche ?\')"><span class="fas fa-check" style="color:#38A169"></span></a>';
+		print '<form method="POST" action="'.$_SERVER["PHP_SELF"].'" style="display:inline" onsubmit="return confirm(\'Terminer cette tâche ?\')">';
+		print '<input type="hidden" name="token" value="'.newToken().'">';
+		print '<input type="hidden" name="action" value="closetask">';
+		print '<input type="hidden" name="taskid" value="'.$obj->task_id.'">';
+		if ($socid > 0) print '<input type="hidden" name="socid" value="'.$socid.'">';
+		print '<button type="submit" title="Terminer" style="border:0;background:transparent;padding:0;cursor:pointer">';
+		print '<span class="fas fa-check" style="color:#38A169"></span>';
+		print '</button>';
+		print '</form>';
 		print '</td>';
 		print '</tr>';
 	}
@@ -516,7 +544,7 @@ if ($num > 0) {
 		$rowclass = 'oddeven';
 
 		$icon = $typeIcons[$obj->interaction_type] ?? 'far fa-comment';
-		$typeLabel = $types[$obj->interaction_type] ?? $obj->interaction_type;
+		$typeLabel = $typesAll[$obj->interaction_type] ?? $obj->interaction_type;
 		$dirBadge = ($obj->direction == 'IN') ? '<span class="badge badge-status4" style="font-size:0.8em">IN</span>' : '<span class="badge badge-status1" style="font-size:0.8em">OUT</span>';
 
 		$previewSummary = strip_tags($obj->summary);
@@ -609,9 +637,15 @@ if ($num > 0) {
 			print lemoncrm_format_date_fr($obj->followup_date);
 			print '<br>'.$interactionHelper->getFollowupBadge();
 			if (!$obj->followup_done && $user->hasRight('lemoncrm', 'interaction', 'write')) {
-				$doneUrl = $_SERVER["PHP_SELF"].'?action=followupdone&id='.$obj->rowid.'&token='.newToken();
-				if ($socid > 0) $doneUrl .= '&socid='.$socid;
-				print ' <a href="'.$doneUrl.'" title="Marquer comme fait" onclick="event.stopPropagation()"><span class="fas fa-check" style="color:#38A169;font-size:0.8em"></span></a>';
+				print ' <form method="POST" action="'.$_SERVER["PHP_SELF"].'" style="display:inline" onsubmit="event.stopPropagation();return confirm(\'Marquer comme fait ?\')">';
+				print '<input type="hidden" name="token" value="'.newToken().'">';
+				print '<input type="hidden" name="action" value="followupdone">';
+				print '<input type="hidden" name="id" value="'.$obj->rowid.'">';
+				if ($socid > 0) print '<input type="hidden" name="socid" value="'.$socid.'">';
+				print '<button type="submit" title="Marquer comme fait" style="border:0;background:transparent;padding:0;cursor:pointer" onclick="event.stopPropagation()">';
+				print '<span class="fas fa-check" style="color:#38A169;font-size:0.8em"></span>';
+				print '</button>';
+				print '</form>';
 			}
 		}
 		print '</td>';
@@ -677,15 +711,35 @@ if ($num > 0) {
 		// Action links - row 1: business actions (only if thirdparty set)
 		if ($obj->fk_soc > 0) {
 			print '<div style="display:flex;gap:20px;align-items:center;border-top:1px solid #e5e7eb;padding-top:12px;font-size:1em">';
-			$createUrl = dol_buildpath('/lemoncrm/ajax/create_document.php', 1).'?interaction_id='.$obj->rowid.'&token='.newToken();
 			if ($user->hasRight('propal', 'creer')) {
-				print '<a href="'.$createUrl.'&type=propal" style="color:#374151;text-decoration:none;font-weight:500"><span class="fas fa-file-signature" style="margin-right:5px;color:#6b7280"></span>Devis</a>';
+				print '<form method="POST" action="'.dol_buildpath('/lemoncrm/ajax/create_document.php', 1).'" style="display:inline;margin:0">';
+				print '<input type="hidden" name="token" value="'.newToken().'">';
+				print '<input type="hidden" name="interaction_id" value="'.$obj->rowid.'">';
+				print '<input type="hidden" name="type" value="propal">';
+				print '<button type="submit" style="border:0;background:transparent;padding:0;cursor:pointer;color:#374151;font-weight:500">';
+				print '<span class="fas fa-file-signature" style="margin-right:5px;color:#6b7280"></span>Devis';
+				print '</button>';
+				print '</form>';
 			}
 			if ($user->hasRight('facture', 'creer')) {
-				print '<a href="'.$createUrl.'&type=facture" style="color:#374151;text-decoration:none;font-weight:500"><span class="fas fa-file-invoice-dollar" style="margin-right:5px;color:#6b7280"></span>Facture</a>';
+				print '<form method="POST" action="'.dol_buildpath('/lemoncrm/ajax/create_document.php', 1).'" style="display:inline;margin:0">';
+				print '<input type="hidden" name="token" value="'.newToken().'">';
+				print '<input type="hidden" name="interaction_id" value="'.$obj->rowid.'">';
+				print '<input type="hidden" name="type" value="facture">';
+				print '<button type="submit" style="border:0;background:transparent;padding:0;cursor:pointer;color:#374151;font-weight:500">';
+				print '<span class="fas fa-file-invoice-dollar" style="margin-right:5px;color:#6b7280"></span>Facture';
+				print '</button>';
+				print '</form>';
 			}
 			if ($user->hasRight('projet', 'creer')) {
-				print '<a href="'.$createUrl.'&type=projet" style="color:#374151;text-decoration:none;font-weight:500"><span class="fas fa-project-diagram" style="margin-right:5px;color:#6b7280"></span>Tâche projet</a>';
+				print '<form method="POST" action="'.dol_buildpath('/lemoncrm/ajax/create_document.php', 1).'" style="display:inline;margin:0">';
+				print '<input type="hidden" name="token" value="'.newToken().'">';
+				print '<input type="hidden" name="interaction_id" value="'.$obj->rowid.'">';
+				print '<input type="hidden" name="type" value="projet">';
+				print '<button type="submit" style="border:0;background:transparent;padding:0;cursor:pointer;color:#374151;font-weight:500">';
+				print '<span class="fas fa-project-diagram" style="margin-right:5px;color:#6b7280"></span>Tâche projet';
+				print '</button>';
+				print '</form>';
 			}
 			if ($user->hasRight('projet', 'time')) {
 				print '<a href="#" class="lcrm-timespent-btn" data-id="'.$obj->rowid.'" data-socid="'.$obj->fk_soc.'" data-minutes="'.(int)$obj->duration_minutes.'" style="color:#374151;text-decoration:none;font-weight:500"><span class="fas fa-stopwatch" style="margin-right:5px;color:#6b7280"></span>Temps consommé</a>';
@@ -705,9 +759,15 @@ if ($num > 0) {
 			print '<a href="#" class="lcrm-attach-btn" data-id="'.$obj->rowid.'" data-socid="'.$obj->fk_soc.'" style="color:#6b7280;text-decoration:none"><span class="fas fa-link" style="margin-right:4px"></span>Rattacher</a>';
 		}
 		if ($user->hasRight('lemoncrm', 'interaction', 'delete')) {
-			$delUrl = $_SERVER["PHP_SELF"].'?action=delete&id='.$obj->rowid.'&token='.newToken();
-			if ($socid > 0) $delUrl .= '&socid='.$socid;
-			print '<a href="'.$delUrl.'" onclick="return confirm(\'Supprimer cette interaction ?\')" style="color:#ef4444;text-decoration:none;margin-left:auto"><span class="fas fa-trash-alt" style="margin-right:4px"></span>Supprimer</a>';
+			print '<form method="POST" action="'.$_SERVER["PHP_SELF"].'" style="display:inline;margin-left:auto" onsubmit="return confirm(\'Supprimer cette interaction ?\')">';
+			print '<input type="hidden" name="token" value="'.newToken().'">';
+			print '<input type="hidden" name="action" value="delete">';
+			print '<input type="hidden" name="id" value="'.$obj->rowid.'">';
+			if ($socid > 0) print '<input type="hidden" name="socid" value="'.$socid.'">';
+			print '<button type="submit" style="border:0;background:transparent;padding:0;cursor:pointer;color:#ef4444">';
+			print '<span class="fas fa-trash-alt" style="margin-right:4px"></span>Supprimer';
+			print '</button>';
+			print '</form>';
 		}
 		print '</div>';
 		print '</div>';
@@ -859,7 +919,7 @@ $(function() {
 		e.preventDefault();
 		var parentId = $(this).data("parent");
 		var childId = $(this).data("child");
-		$.get("'.dol_buildpath('/lemoncrm/ajax/link_interaction.php', 1).'", {action: "attach", id: childId, parent_id: parentId, token: "'.newToken().'"}, function(data) {
+		$.post("'.dol_buildpath('/lemoncrm/ajax/link_interaction.php', 1).'", {action: "attach", id: childId, parent_id: parentId, token: "'.newToken().'"}, function(data) {
 			if (data.success) {
 				window.location.reload();
 			} else {

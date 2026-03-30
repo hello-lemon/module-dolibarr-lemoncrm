@@ -33,23 +33,44 @@ function lemoncrm_admin_prepare_head()
 }
 
 /**
- * Return list of interaction types for select
+ * Return list of interaction types from Dolibarr agenda dictionary (llx_c_actioncomm)
+ * Filters out systemauto types and Event types (AC_EO_*)
  *
- * @return array
+ * @param bool $activeOnly If true (default), only return active types
+ * @return array code => label
  */
-function lemoncrm_get_interaction_types()
+function lemoncrm_get_interaction_types($activeOnly = true)
 {
-	global $langs;
+	global $db, $langs;
 
-	return array(
-		'AC_TEL' => $langs->trans('AC_TEL'),
-		'AC_EMAIL' => $langs->trans('AC_EMAIL'),
-		'AC_LINKEDIN' => $langs->trans('AC_LINKEDIN'),
-		'AC_TEAMS' => $langs->trans('AC_TEAMS'),
-		'AC_RDV' => $langs->trans('AC_RDV'),
-		'AC_MEETING_INPERSON' => $langs->trans('AC_MEETING_INPERSON'),
-		'AC_OTH' => $langs->trans('AC_OTH'),
-	);
+	static $cacheAll = null;
+	static $cacheActive = null;
+
+	if ($activeOnly && $cacheActive !== null) return $cacheActive;
+	if (!$activeOnly && $cacheAll !== null) return $cacheAll;
+
+	$result = array();
+
+	$sql = "SELECT code, libelle FROM ".MAIN_DB_PREFIX."c_actioncomm";
+	$sql .= " WHERE code LIKE 'LCRM_%'";
+	if ($activeOnly) $sql .= " AND active = 1";
+	$sql .= " ORDER BY position ASC, code ASC";
+
+	$resql = $db->query($sql);
+	if ($resql) {
+		while ($obj = $db->fetch_object($resql)) {
+			$trans = $langs->trans($obj->code);
+			$result[$obj->code] = ($trans !== $obj->code) ? $trans : $obj->libelle;
+		}
+	}
+
+	if ($activeOnly) {
+		$cacheActive = $result;
+	} else {
+		$cacheAll = $result;
+	}
+
+	return $result;
 }
 
 /**
@@ -199,15 +220,32 @@ function lemoncrm_format_date_fr($timestamp_or_string, $format = 'short')
  */
 function lemoncrm_get_type_icons()
 {
-	return array(
-		'AC_TEL' => 'fas fa-phone-alt',
-		'AC_EMAIL' => 'fas fa-envelope',
-		'AC_LINKEDIN' => 'fas fa-share-alt',
-		'AC_TEAMS' => 'fas fa-video',
-		'AC_RDV' => 'far fa-calendar-check',
-		'AC_MEETING_INPERSON' => 'fas fa-users',
-		'AC_OTH' => 'far fa-comment',
+	$defaults = array(
+		'LCRM_TEL' => 'fas fa-phone-alt',
+		'LCRM_EMAIL' => 'fas fa-envelope',
+		'LCRM_LINKEDIN' => 'fas fa-share-alt',
+		'LCRM_TEAMS' => 'fas fa-video',
+		'LCRM_RDV' => 'far fa-calendar-check',
+		'LCRM_MEETING' => 'fas fa-users',
+		'LCRM_NOTE' => 'far fa-comment',
+		'LCRM_RELANCE' => 'fas fa-bell',
 	);
+
+	// Override with saved config
+	$saved = json_decode(getDolGlobalString('LEMONCRM_TYPE_ICONS', '{}'), true);
+	if (is_array($saved)) {
+		$defaults = array_merge($defaults, $saved);
+	}
+
+	// Fallback for types not in the list
+	$types = lemoncrm_get_interaction_types(false);
+	foreach ($types as $code => $label) {
+		if (!isset($defaults[$code])) {
+			$defaults[$code] = 'far fa-comment';
+		}
+	}
+
+	return $defaults;
 }
 
 /**

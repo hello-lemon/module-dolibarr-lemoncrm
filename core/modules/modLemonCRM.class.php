@@ -26,7 +26,7 @@ class modLemonCRM extends DolibarrModules
 		$this->name = preg_replace('/^mod/i', '', get_class($this));
 		$this->description = "Suivi des interactions clients et prospects";
 		$this->descriptionlong = "Module CRM pour logger les echanges (tel, email, LinkedIn, Teams, RDV), gerer les relances et suivre les prospects.";
-		$this->version = '1.0.0';
+		$this->version = '1.0.1';
 		$this->const_name = 'MAIN_MODULE_'.strtoupper($this->name);
 		$this->picto = 'fa-comments';
 
@@ -62,6 +62,47 @@ class modLemonCRM extends DolibarrModules
 
 		$this->const = array();
 
+		// Dictionaries
+		$this->dictionaries = array(
+			'langs' => 'lemoncrm@lemoncrm',
+			'tabname' => array(
+				MAIN_DB_PREFIX.'c_lemoncrm_sentiment',
+				MAIN_DB_PREFIX.'c_lemoncrm_prospect_status',
+			),
+			'tablib' => array(
+				'Sentiments CRM',
+				'Statuts prospect CRM',
+			),
+			'tabsql' => array(
+				'SELECT rowid, code, label, color, position, active FROM '.MAIN_DB_PREFIX.'c_lemoncrm_sentiment WHERE entity IN (0, __ENTITY__)',
+				'SELECT rowid, code, label, color, position, active FROM '.MAIN_DB_PREFIX.'c_lemoncrm_prospect_status WHERE entity IN (0, __ENTITY__)',
+			),
+			'tabsqlsort' => array(
+				'position ASC',
+				'position ASC',
+			),
+			'tabfield' => array(
+				'code,label,color,position',
+				'code,label,color,position',
+			),
+			'tabfieldvalue' => array(
+				'code,label,color,position',
+				'code,label,color,position',
+			),
+			'tabfieldinsert' => array(
+				'code,label,color,position',
+				'code,label,color,position',
+			),
+			'tabrowid' => array(
+				'rowid',
+				'rowid',
+			),
+			'tabcond' => array(
+				'$conf->lemoncrm->enabled',
+				'$conf->lemoncrm->enabled',
+			),
+		);
+
 		if (!isset($conf->lemoncrm) || !isset($conf->lemoncrm->enabled)) {
 			$conf->lemoncrm = new stdClass();
 			$conf->lemoncrm->enabled = 0;
@@ -96,12 +137,14 @@ class modLemonCRM extends DolibarrModules
 		$this->menu = array();
 		$r = 0;
 
-		// === Menu principal "Lemon" en haut ===
+		// === Menu principal en haut (nom et icône configurables) ===
+		$menuLabel = getDolGlobalString('LEMONCRM_MENU_LABEL', 'Lemon');
+		$menuIcon = getDolGlobalString('LEMONCRM_MENU_ICON', 'fa-lemon');
 		$this->menu[$r] = array(
 			'fk_menu' => '',
 			'type' => 'top',
-			'titre' => 'Lemon',
-			'prefix' => img_picto('', 'fa-lemon', 'class="fas paddingright pictofixedwidth"'),
+			'titre' => $menuLabel,
+			'prefix' => img_picto('', $menuIcon, 'class="fas paddingright pictofixedwidth"'),
 			'mainmenu' => 'lemon',
 			'leftmenu' => '',
 			'url' => '/lemoncrm/index.php?mainmenu=lemon',
@@ -177,10 +220,25 @@ class modLemonCRM extends DolibarrModules
 
 		$sql = array();
 
-		// Insert custom action types if not existing
-		$sql[] = "INSERT IGNORE INTO ".MAIN_DB_PREFIX."c_actioncomm (id, code, type, libelle, module, active, position) VALUES (100, 'AC_LINKEDIN', 'system', 'Message LinkedIn', 'lemoncrm', 1, 60)";
-		$sql[] = "INSERT IGNORE INTO ".MAIN_DB_PREFIX."c_actioncomm (id, code, type, libelle, module, active, position) VALUES (101, 'AC_TEAMS', 'system', 'Reunion Teams', 'lemoncrm', 1, 61)";
-		$sql[] = "INSERT IGNORE INTO ".MAIN_DB_PREFIX."c_actioncomm (id, code, type, libelle, module, active, position) VALUES (102, 'AC_MEETING_INPERSON', 'system', 'Rendez-vous physique', 'lemoncrm', 1, 62)";
+		// Insert LCRM_ types in Dolibarr agenda dictionary
+		$sql[] = "INSERT IGNORE INTO ".MAIN_DB_PREFIX."c_actioncomm (id, code, type, libelle, module, active, position) VALUES (500, 'LCRM_TEL', 'module', 'Appel', 'lemoncrm', 1, 10)";
+		$sql[] = "INSERT IGNORE INTO ".MAIN_DB_PREFIX."c_actioncomm (id, code, type, libelle, module, active, position) VALUES (501, 'LCRM_EMAIL', 'module', 'Email', 'lemoncrm', 1, 20)";
+		$sql[] = "INSERT IGNORE INTO ".MAIN_DB_PREFIX."c_actioncomm (id, code, type, libelle, module, active, position) VALUES (502, 'LCRM_LINKEDIN', 'module', 'LinkedIn', 'lemoncrm', 1, 30)";
+		$sql[] = "INSERT IGNORE INTO ".MAIN_DB_PREFIX."c_actioncomm (id, code, type, libelle, module, active, position) VALUES (503, 'LCRM_TEAMS', 'module', 'Teams', 'lemoncrm', 1, 40)";
+		$sql[] = "INSERT IGNORE INTO ".MAIN_DB_PREFIX."c_actioncomm (id, code, type, libelle, module, active, position) VALUES (504, 'LCRM_RDV', 'module', 'Rendez-vous', 'lemoncrm', 1, 50)";
+		$sql[] = "INSERT IGNORE INTO ".MAIN_DB_PREFIX."c_actioncomm (id, code, type, libelle, module, active, position) VALUES (505, 'LCRM_MEETING', 'module', 'RDV physique', 'lemoncrm', 1, 60)";
+		$sql[] = "INSERT IGNORE INTO ".MAIN_DB_PREFIX."c_actioncomm (id, code, type, libelle, module, active, position) VALUES (506, 'LCRM_NOTE', 'module', 'Note', 'lemoncrm', 1, 100)";
+		$sql[] = "INSERT IGNORE INTO ".MAIN_DB_PREFIX."c_actioncomm (id, code, type, libelle, module, active, position) VALUES (507, 'LCRM_RELANCE', 'module', 'Relance', 'lemoncrm', 1, 70)";
+
+		// Migrate existing interactions from AC_ to LCRM_ codes
+		$sql[] = "UPDATE ".MAIN_DB_PREFIX."lemoncrm_interaction SET interaction_type = 'LCRM_TEL' WHERE interaction_type = 'AC_TEL'";
+		$sql[] = "UPDATE ".MAIN_DB_PREFIX."lemoncrm_interaction SET interaction_type = 'LCRM_EMAIL' WHERE interaction_type = 'AC_EMAIL'";
+		$sql[] = "UPDATE ".MAIN_DB_PREFIX."lemoncrm_interaction SET interaction_type = 'LCRM_LINKEDIN' WHERE interaction_type = 'AC_LINKEDIN'";
+		$sql[] = "UPDATE ".MAIN_DB_PREFIX."lemoncrm_interaction SET interaction_type = 'LCRM_TEAMS' WHERE interaction_type = 'AC_TEAMS'";
+		$sql[] = "UPDATE ".MAIN_DB_PREFIX."lemoncrm_interaction SET interaction_type = 'LCRM_RDV' WHERE interaction_type = 'AC_RDV'";
+		$sql[] = "UPDATE ".MAIN_DB_PREFIX."lemoncrm_interaction SET interaction_type = 'LCRM_MEETING' WHERE interaction_type = 'AC_MEETING_INPERSON'";
+		$sql[] = "UPDATE ".MAIN_DB_PREFIX."lemoncrm_interaction SET interaction_type = 'LCRM_NOTE' WHERE interaction_type = 'AC_OTH'";
+		$sql[] = "UPDATE ".MAIN_DB_PREFIX."lemoncrm_interaction SET interaction_type = 'LCRM_RELANCE' WHERE interaction_type = 'AC_RELANCE'";
 
 		return $this->_init($sql, $options);
 	}

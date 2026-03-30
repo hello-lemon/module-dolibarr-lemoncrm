@@ -843,6 +843,10 @@ tr.lemoncrm-done td {
 }
 
 .lcrm-quicklog-context {
+	display: flex;
+	align-items: center;
+	flex-wrap: nowrap;
+	gap: 8px;
 	padding: 8px 10px;
 	margin-bottom: 4px;
 	font-size: 0.82em;
@@ -850,11 +854,56 @@ tr.lemoncrm-done td {
 	color: #374151;
 	background: #f9fafb;
 	border-radius: 6px;
+	min-width: 0;
 }
 
-.lcrm-quicklog-context .fa {
+.lcrm-ctx-building {
+	flex-shrink: 0;
 	color: #9ca3af;
-	margin-right: 4px;
+	font-size: 1em;
+	line-height: 1;
+}
+
+.lcrm-ctx-inline {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+	flex: 1 1 auto;
+	line-height: 1.25;
+}
+
+.lcrm-ctx-name {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	min-width: 0;
+}
+
+.lcrm-ctx-link {
+	flex-shrink: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 26px;
+	height: 26px;
+	border-radius: 8px;
+	color: #6b7280;
+	text-decoration: none;
+	background: rgba(255, 255, 255, 0.65);
+	border: 1px solid rgba(229, 231, 235, 0.9);
+}
+
+.lcrm-ctx-link .fa {
+	margin: 0;
+	font-size: 0.85em;
+	line-height: 1;
+}
+
+.lcrm-ctx-link:hover {
+	background: #ffffff;
+	color: #111827;
+	text-decoration: none;
 }
 
 .lcrm-quicklog-title {
@@ -937,6 +986,31 @@ tr.lemoncrm-done td {
 .lcrm-search-item:hover { background: #f9fafb; color: #111827; }
 .lcrm-quicklog-item { text-decoration: none !important; }
 .lcrm-quicklog-item:hover { text-decoration: none !important; }
+
+/* Quicklog autocomplete (jQuery UI) */
+#lcrm-quicklog-panel .ui-autocomplete {
+	max-height: 220px;
+	overflow-y: auto;
+	overflow-x: hidden;
+	background: #fff;
+	border: 1px solid #e5e7eb;
+	border-radius: 10px;
+	box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+	padding: 6px;
+}
+
+#lcrm-quicklog-panel .ui-autocomplete .ui-menu-item-wrapper {
+	padding: 8px 10px;
+	border-radius: 8px;
+	font-size: 0.88em;
+	color: #374151;
+}
+
+#lcrm-quicklog-panel .ui-autocomplete .ui-state-active {
+	border: none;
+	background: rgba(247, 201, 72, 0.25);
+	color: #111827;
+}
 
 /* Thread styles - fond visible uniquement quand deplie, variable CSS Dolibarr */
 tr.lcrm-thread-open > td { background: var(--colorbacklinepairchecked) !important; }
