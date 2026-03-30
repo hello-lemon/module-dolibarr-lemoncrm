@@ -303,7 +303,7 @@ if ($action == 'create' || ($action == 'edit' && $id > 0)) {
 		print '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;margin-bottom:12px;color:#991b1b;font-size:0.9em">'.$formError.'</div>';
 	}
 
-	print '<form method="POST" action="'.dol_escape_htmltag($_SERVER["PHP_SELF"]).'" id="lemoncrm-main-form">';
+	print '<form method="POST" action="'.dol_escape_htmltag($_SERVER["PHP_SELF"]).'" id="lemoncrm-main-form" novalidate>';
 	print '<input type="hidden" name="token" value="'.newToken().'">';
 	print '<input type="hidden" name="action" value="'.$formAction.'">';
 	if ($isEdit) print '<input type="hidden" name="id" value="'.$object->id.'">';
@@ -510,7 +510,7 @@ if ($action == 'create' || ($action == 'edit' && $id > 0)) {
 
 	// ===== Submit =====
 	print '<div class="lcrm-submit">';
-	print '<button type="button" class="lcrm-btn-cancel" onclick="history.back()">Annuler</button>';
+	print '<button type="button" class="lcrm-btn-cancel" onclick="if(window.opener){window.close();}else{history.back();}">Annuler</button>';
 	print '<button type="submit" class="lcrm-btn-save">Enregistrer</button>';
 	print '</div>';
 
