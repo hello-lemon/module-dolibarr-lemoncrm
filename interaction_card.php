@@ -265,6 +265,10 @@ if ($action == 'create' || ($action == 'edit' && $id > 0)) {
 	$curContact = $isEdit ? $object->fk_socpeople : ($contactid ?: GETPOSTINT('fk_socpeople'));
 	$curDir = $isEdit ? $object->direction : (GETPOST('direction', 'aZ') ?: 'OUT');
 	$curDate = $isEdit ? $object->date_interaction : dol_now();
+	// LinkedIn extension: pre-fill date from URL param (Unix timestamp)
+	if (!$isEdit && GETPOST('linkedin_date', 'int')) {
+		$curDate = GETPOSTINT('linkedin_date');
+	}
 	$curDuration = $isEdit ? $object->duration_minutes : GETPOSTINT('duration_minutes');
 	$curSummary = $isEdit ? $object->summary : GETPOST('summary', 'restricthtml');
 	// LinkedIn extension: pre-fill summary from URL param
