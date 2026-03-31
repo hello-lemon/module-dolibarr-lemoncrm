@@ -71,6 +71,40 @@ if (GETPOST('action', 'alpha') == 'save' && $_SERVER['REQUEST_METHOD'] === 'POST
 		dolibarr_set_const($db, 'LEMONCRM_TYPE_ICONS', json_encode($iconMap), 'chaine', 0, '', $conf->entity);
 	}
 
+	// Save AI settings
+	$aiEnabled = GETPOSTINT('LEMONCRM_AI_ENABLED');
+	dolibarr_set_const($db, 'LEMONCRM_AI_ENABLED', $aiEnabled, 'chaine', 0, '', $conf->entity);
+
+	$aiApiKey = GETPOST('LEMONCRM_AI_API_KEY', 'alpha');
+	if (!empty($aiApiKey) && $aiApiKey !== '••••••••') {
+		dolibarr_set_const($db, 'LEMONCRM_AI_API_KEY', $aiApiKey, 'chaine', 0, '', $conf->entity);
+	}
+
+	$aiModel = GETPOST('LEMONCRM_AI_MODEL', 'alpha');
+	if (!empty($aiModel)) {
+		dolibarr_set_const($db, 'LEMONCRM_AI_MODEL', $aiModel, 'chaine', 0, '', $conf->entity);
+	}
+
+	$aiSystemPrompt = GETPOST('LEMONCRM_AI_SYSTEM_PROMPT', 'restricthtml');
+	dolibarr_set_const($db, 'LEMONCRM_AI_SYSTEM_PROMPT', $aiSystemPrompt, 'chaine', 0, '', $conf->entity);
+
+	// Save AI objectives
+	$objCodes = GETPOST('ai_obj_code', 'array');
+	$objLabels = GETPOST('ai_obj_label', 'array');
+	$objPrompts = GETPOST('ai_obj_prompt', 'array');
+	if (is_array($objCodes)) {
+		$objectives = array();
+		foreach ($objCodes as $i => $code) {
+			$code = trim($code);
+			$label = trim($objLabels[$i] ?? '');
+			$prompt = trim($objPrompts[$i] ?? '');
+			if (!empty($code) && !empty($label)) {
+				$objectives[] = array('code' => $code, 'label' => $label, 'prompt' => $prompt);
+			}
+		}
+		dolibarr_set_const($db, 'LEMONCRM_AI_OBJECTIVES', json_encode($objectives), 'chaine', 0, '', $conf->entity);
+	}
+
 	setEventMessages('Configuration sauvegardée', null, 'mesgs');
 	header("Location: ".$_SERVER["PHP_SELF"]);
 	exit;
@@ -177,6 +211,95 @@ if ($mode == 'about') {
 	print '<option value="0"'.($persistValue == 0 ? ' selected' : '').'>La page prime : le tiers de la page en cours remplace toujours la sélection manuelle</option>';
 	print '<option value="1"'.($persistValue == 1 ? ' selected' : '').'>Persistant : le tiers sélectionné manuellement reste actif tant que le navigateur est ouvert</option>';
 	print '</select>';
+	print '</td>';
+	print '</tr>';
+
+	// ===== AI CONFIGURATION =====
+	dol_include_once('/lemoncrm/class/lemoncrm_ai.class.php');
+
+	$aiEnabled = getDolGlobalInt('LEMONCRM_AI_ENABLED', 0);
+	$aiApiKey = getDolGlobalString('LEMONCRM_AI_API_KEY', '');
+	$aiModel = getDolGlobalString('LEMONCRM_AI_MODEL', 'claude-sonnet-4-20250514');
+	$aiSystemPrompt = getDolGlobalString('LEMONCRM_AI_SYSTEM_PROMPT', '');
+	$aiObjectives = LemonCRMAI::getObjectives();
+
+	print '<tr class="liste_titre"><td colspan="2">Intelligence Artificielle</td></tr>';
+
+	// Enable/disable
+	print '<tr class="oddeven">';
+	print '<td>Activer la generation IA</td>';
+	print '<td>';
+	print '<select name="LEMONCRM_AI_ENABLED" class="flat">';
+	print '<option value="0"'.($aiEnabled == 0 ? ' selected' : '').'>Desactive</option>';
+	print '<option value="1"'.($aiEnabled == 1 ? ' selected' : '').'>Active</option>';
+	print '</select>';
+	print '</td>';
+	print '</tr>';
+
+	// API Key
+	print '<tr class="oddeven">';
+	print '<td>Cle API Anthropic</td>';
+	print '<td>';
+	$displayKey = !empty($aiApiKey) ? '••••••••' : '';
+	print '<input type="password" name="LEMONCRM_AI_API_KEY" class="flat minwidth300" value="'.dol_escape_htmltag($displayKey).'" autocomplete="off">';
+	print ' <span class="opacitymedium">(Claude API - <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">obtenir une cle</a>)</span>';
+	print '</td>';
+	print '</tr>';
+
+	// Model
+	print '<tr class="oddeven">';
+	print '<td>Modele Claude</td>';
+	print '<td>';
+	print '<select name="LEMONCRM_AI_MODEL" class="flat minwidth200">';
+	$models = array(
+		'claude-sonnet-4-20250514' => 'Claude Sonnet 4 (recommande)',
+		'claude-haiku-4-5-20251001' => 'Claude Haiku 4.5 (rapide, economique)',
+	);
+	foreach ($models as $code => $label) {
+		$sel = ($aiModel == $code) ? ' selected' : '';
+		print '<option value="'.$code.'"'.$sel.'>'.$label.'</option>';
+	}
+	print '</select>';
+	print '</td>';
+	print '</tr>';
+
+	// System prompt
+	print '<tr class="oddeven">';
+	print '<td style="vertical-align:top">Prompt global<br><span class="opacitymedium" style="font-size:0.82em">Regles, ton, infos entreprise.<br>S\'applique a toutes les generations.</span></td>';
+	print '<td>';
+	print '<textarea name="LEMONCRM_AI_SYSTEM_PROMPT" class="flat" rows="5" style="width:100%;max-width:600px;box-sizing:border-box" placeholder="Ex: Tu es un commercial de [Nom Entreprise]. Tu vends [services]. Ton ton est professionnel mais chaleureux. Ne tutoie jamais. Mentionne toujours notre garantie satisfait ou rembourse.">';
+	print dol_escape_htmltag($aiSystemPrompt);
+	print '</textarea>';
+	print '</td>';
+	print '</tr>';
+
+	// Objectives
+	print '<tr class="oddeven">';
+	print '<td style="vertical-align:top">Objectifs de generation<br><span class="opacitymedium" style="font-size:0.82em">Chaque objectif a un prompt<br>qui s\'ajoute au prompt global.</span></td>';
+	print '<td>';
+	print '<table class="noborder" id="lcrm-ai-objectives-table" style="max-width:600px">';
+	print '<tr class="liste_titre"><td>Code</td><td>Nom</td><td>Prompt specifique</td><td></td></tr>';
+	foreach ($aiObjectives as $i => $obj) {
+		print '<tr class="oddeven lcrm-ai-obj-row">';
+		print '<td><input type="text" name="ai_obj_code[]" class="flat" style="width:80px" value="'.dol_escape_htmltag($obj['code']).'"></td>';
+		print '<td><input type="text" name="ai_obj_label[]" class="flat" style="width:160px" value="'.dol_escape_htmltag($obj['label']).'"></td>';
+		print '<td><textarea name="ai_obj_prompt[]" class="flat" rows="2" style="width:100%;box-sizing:border-box">'.dol_escape_htmltag($obj['prompt']).'</textarea></td>';
+		print '<td><button type="button" class="button" onclick="this.closest(\'tr\').remove()" title="Supprimer"><span class="fa fa-trash"></span></button></td>';
+		print '</tr>';
+	}
+	print '</table>';
+	print '<button type="button" class="button" id="lcrm-ai-add-obj" style="margin-top:6px"><span class="fa fa-plus"></span> Ajouter un objectif</button>';
+	print '<script>';
+	print 'document.getElementById("lcrm-ai-add-obj").addEventListener("click", function() {';
+	print '  var table = document.getElementById("lcrm-ai-objectives-table");';
+	print '  var row = table.insertRow(-1);';
+	print '  row.className = "oddeven lcrm-ai-obj-row";';
+	print '  row.innerHTML = \'<td><input type="text" name="ai_obj_code[]" class="flat" style="width:80px" placeholder="code"></td>\'';
+	print '    + \'<td><input type="text" name="ai_obj_label[]" class="flat" style="width:160px" placeholder="Nom de l\\\'objectif"></td>\'';
+	print '    + \'<td><textarea name="ai_obj_prompt[]" class="flat" rows="2" style="width:100%;box-sizing:border-box" placeholder="Prompt specifique pour cet objectif..."></textarea></td>\'';
+	print '    + \'<td><button type="button" class="button" onclick="this.closest(\\\'tr\\\').remove()" title="Supprimer"><span class="fa fa-trash"></span></button></td>\';';
+	print '});';
+	print '</script>';
 	print '</td>';
 	print '</tr>';
 

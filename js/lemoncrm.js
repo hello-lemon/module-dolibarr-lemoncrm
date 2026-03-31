@@ -217,3 +217,154 @@ $(function() {
 
 	lcrm_init_autocomplete();
 });
+
+/* ========== AI MESSAGE GENERATION ========== */
+
+$(function() {
+	// Don't run if AI is not configured
+	if (typeof lcrm_ai_url === "undefined") return;
+
+	// Toggle inline AI panel
+	$(document).on("click", "#lcrm-ai-toggle", function() {
+		$("#lcrm-ai-panel").slideToggle(150);
+	});
+
+	// Get current form values for AI context
+	function lcrm_ai_get_params(source) {
+		var prefix = (source === "drawer") ? "#lcrm-ai-drawer-" : "#lcrm-ai-";
+		var socid = $("select[name='fk_soc'], input[name='fk_soc']").val() || $("input[name='socid']").val() || 0;
+		// select2 may store value differently
+		if (!socid || socid == 0) {
+			var s2 = $("#fk_soc");
+			if (s2.length) socid = s2.val();
+		}
+		var contactid = $("select[name='fk_socpeople']").val() || 0;
+		var channel = $("input[name='interaction_type']:checked").val() || $("input[name='interaction_type_backup']").val() || "";
+
+		return {
+			token: lcrm_ai_token,
+			socid: parseInt(socid) || 0,
+			contactid: parseInt(contactid) || 0,
+			channel: channel,
+			objective: $(prefix + "objective").val() || "",
+			incoming_message: $(prefix + "incoming").val() || ""
+		};
+	}
+
+	// Call AI generation endpoint
+	function lcrm_ai_generate(source) {
+		var params = lcrm_ai_get_params(source);
+
+		if (!params.channel) {
+			alert("Selectionnez un type d'interaction d'abord");
+			return;
+		}
+
+		var prefix = (source === "drawer") ? "#lcrm-ai-drawer-" : "#lcrm-ai-";
+		$(prefix + "loading").show();
+		$(prefix + "result").hide();
+		$(prefix + "generate").prop("disabled", true);
+
+		$.ajax({
+			url: lcrm_ai_url,
+			type: "POST",
+			data: params,
+			dataType: "json",
+			success: function(data) {
+				$(prefix + "loading").hide();
+				$(prefix + "generate").prop("disabled", false);
+
+				if (data.success && data.message) {
+					$(prefix + "result-content").text(data.message);
+					$(prefix + "result").show();
+				} else {
+					var errorMsg = data.error || "Erreur inconnue";
+					$(prefix + "result-content").html('<span style="color:#dc2626">' + $("<span>").text(errorMsg).html() + '</span>');
+					$(prefix + "result").show();
+				}
+			},
+			error: function(xhr) {
+				$(prefix + "loading").hide();
+				$(prefix + "generate").prop("disabled", false);
+				$(prefix + "result-content").html('<span style="color:#dc2626">Erreur de connexion au serveur</span>');
+				$(prefix + "result").show();
+			}
+		});
+	}
+
+	// Generate buttons (inline + drawer)
+	$(document).on("click", "#lcrm-ai-generate, #lcrm-ai-regenerate", function() {
+		lcrm_ai_generate("inline");
+	});
+	$(document).on("click", "#lcrm-ai-drawer-generate, #lcrm-ai-drawer-regenerate", function() {
+		lcrm_ai_generate("drawer");
+	});
+
+	// Insert into summary WYSIWYG
+	function lcrm_ai_insert_to_summary(text) {
+		// Try CKEditor first
+		if (typeof CKEDITOR !== "undefined" && CKEDITOR.instances && CKEDITOR.instances.summary) {
+			CKEDITOR.instances.summary.setData(text.replace(/\n/g, "<br>"));
+			return;
+		}
+		// Fallback: textarea or contenteditable
+		var $textarea = $("textarea[name='summary'], #summary");
+		if ($textarea.length) {
+			$textarea.val(text);
+			return;
+		}
+		var $editor = $(".lcrm-editor[data-name='summary']");
+		if ($editor.length) {
+			$editor.html(text.replace(/\n/g, "<br>"));
+		}
+	}
+
+	$(document).on("click", "#lcrm-ai-insert, #lcrm-ai-drawer-insert", function() {
+		var text = $(this).closest(".lcrm-ai-result").find(".lcrm-ai-result-content").text();
+		lcrm_ai_insert_to_summary(text);
+		// Close drawer if open
+		$("#lcrm-ai-drawer").hide();
+	});
+
+	// Copy to clipboard
+	$(document).on("click", "#lcrm-ai-copy, #lcrm-ai-drawer-copy", function() {
+		var $btn = $(this);
+		var text = $btn.closest(".lcrm-ai-result").find(".lcrm-ai-result-content").text();
+		if (navigator.clipboard && navigator.clipboard.writeText) {
+			navigator.clipboard.writeText(text).then(function() {
+				var orig = $btn.html();
+				$btn.html('<span class="fas fa-check"></span> Copie !');
+				setTimeout(function() { $btn.html(orig); }, 1500);
+			});
+		} else {
+			// Fallback
+			var $temp = $("<textarea>");
+			$("body").append($temp);
+			$temp.val(text).select();
+			document.execCommand("copy");
+			$temp.remove();
+			var orig = $btn.html();
+			$btn.html('<span class="fas fa-check"></span> Copie !');
+			setTimeout(function() { $btn.html(orig); }, 1500);
+		}
+	});
+
+	// Drawer toggle
+	$(document).on("click", "#lcrm-ai-drawer-toggle", function() {
+		var $drawer = $("#lcrm-ai-drawer");
+		if ($drawer.is(":visible")) {
+			$drawer.hide();
+		} else {
+			// Sync objective and incoming message from inline panel
+			var inlineObj = $("#lcrm-ai-objective").val();
+			var inlineMsg = $("#lcrm-ai-incoming").val();
+			if (inlineObj) $("#lcrm-ai-drawer-objective").val(inlineObj);
+			if (inlineMsg) $("#lcrm-ai-drawer-incoming").val(inlineMsg);
+			$drawer.show();
+		}
+	});
+
+	$(document).on("click", "#lcrm-ai-drawer-close", function() {
+		$("#lcrm-ai-drawer").hide();
+	});
+});

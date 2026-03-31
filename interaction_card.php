@@ -468,6 +468,147 @@ if ($action == 'create' || ($action == 'edit' && $id > 0)) {
 	print $doleditor->Create(1);
 	print '</div>';
 
+	// ===== AI GENERATION PANEL =====
+	if (getDolGlobalInt('LEMONCRM_AI_ENABLED') && !empty(getDolGlobalString('LEMONCRM_AI_API_KEY'))) {
+		dol_include_once('/lemoncrm/class/lemoncrm_ai.class.php');
+		$aiObjectives = LemonCRMAI::getObjectives();
+
+		print '<div class="lcrm-ai-bar">';
+		print '<button type="button" class="lcrm-pill" id="lcrm-ai-toggle" style="--pill-color:#8b5cf6"><span class="fas fa-magic"></span> '.$langs->trans('AIGenerateMessage').'</button>';
+		print '<button type="button" class="lcrm-pill" id="lcrm-ai-drawer-toggle" style="--pill-color:#6366f1" title="'.$langs->trans('AIAdvancedMode').'"><span class="fas fa-expand-alt"></span></button>';
+		print '</div>';
+
+		// Inline AI panel (hidden by default)
+		print '<div class="lcrm-ai-panel" id="lcrm-ai-panel" style="display:none">';
+		print '<div class="lcrm-ai-panel-row">';
+		print '<div class="lcrm-field" style="flex:1">';
+		print '<label class="lcrm-label">'.$langs->trans('AIObjective').'</label>';
+		print '<select id="lcrm-ai-objective" class="flat" style="width:100%">';
+		foreach ($aiObjectives as $obj) {
+			print '<option value="'.dol_escape_htmltag($obj['code']).'">'.dol_escape_htmltag($obj['label']).'</option>';
+		}
+		print '</select>';
+		print '</div>';
+		print '<div class="lcrm-field" style="flex:2">';
+		print '<label class="lcrm-label">'.$langs->trans('AIIncomingMessage').'</label>';
+		print '<textarea id="lcrm-ai-incoming" class="flat" rows="2" style="width:100%;box-sizing:border-box" placeholder="Collez ici le message recu (LinkedIn, email, etc.)"></textarea>';
+		print '</div>';
+		print '</div>';
+		print '<div style="margin-top:8px">';
+		print '<button type="button" class="button" id="lcrm-ai-generate"><span class="fas fa-magic"></span> '.$langs->trans('AIGenerate').'</button>';
+		print '</div>';
+
+		// Result zone
+		print '<div class="lcrm-ai-result" id="lcrm-ai-result" style="display:none">';
+		print '<div class="lcrm-ai-result-header">';
+		print '<span class="lcrm-detail-label">'.$langs->trans('AIResultTitle').'</span>';
+		print '</div>';
+		print '<div class="lcrm-ai-result-content" id="lcrm-ai-result-content"></div>';
+		print '<div class="lcrm-ai-result-actions">';
+		print '<button type="button" class="button" id="lcrm-ai-insert"><span class="fas fa-check"></span> '.$langs->trans('AIInsertInSummary').'</button>';
+		print '<button type="button" class="button" id="lcrm-ai-copy"><span class="fas fa-copy"></span> '.$langs->trans('AICopyMessage').'</button>';
+		print '<button type="button" class="button" id="lcrm-ai-regenerate"><span class="fas fa-sync-alt"></span> '.$langs->trans('AIRegenerate').'</button>';
+		print '</div>';
+		print '</div>';
+
+		// Loading indicator
+		print '<div class="lcrm-ai-loading" id="lcrm-ai-loading" style="display:none">';
+		print '<span class="fas fa-spinner fa-spin"></span> '.$langs->trans('AILoading');
+		print '</div>';
+
+		print '</div>'; // ai-panel
+
+		// AI drawer (advanced mode, hidden by default)
+		print '<div class="lcrm-ai-drawer" id="lcrm-ai-drawer" style="display:none">';
+		print '<div class="lcrm-ai-drawer-header">';
+		print '<span class="lcrm-ai-drawer-title"><span class="fas fa-magic"></span> '.$langs->trans('AIGeneration').'</span>';
+		print '<button type="button" class="lcrm-ai-drawer-close" id="lcrm-ai-drawer-close"><span class="fas fa-times"></span></button>';
+		print '</div>';
+		print '<div class="lcrm-ai-drawer-body">';
+
+		// Objective selector in drawer
+		print '<div class="lcrm-detail-group">';
+		print '<label class="lcrm-label">'.$langs->trans('AIObjective').'</label>';
+		print '<select id="lcrm-ai-drawer-objective" class="flat" style="width:100%">';
+		foreach ($aiObjectives as $obj) {
+			print '<option value="'.dol_escape_htmltag($obj['code']).'">'.dol_escape_htmltag($obj['label']).'</option>';
+		}
+		print '</select>';
+		print '</div>';
+
+		// Incoming message in drawer
+		print '<div class="lcrm-detail-group">';
+		print '<label class="lcrm-label">'.$langs->trans('AIIncomingMessage').'</label>';
+		print '<textarea id="lcrm-ai-drawer-incoming" class="flat" rows="4" style="width:100%;box-sizing:border-box" placeholder="Collez ici le message recu..."></textarea>';
+		print '</div>';
+
+		print '<div class="lcrm-detail-group">';
+		print '<button type="button" class="button" id="lcrm-ai-drawer-generate"><span class="fas fa-magic"></span> '.$langs->trans('AIGenerate').'</button>';
+		print '</div>';
+
+		// Drawer loading
+		print '<div class="lcrm-ai-loading" id="lcrm-ai-drawer-loading" style="display:none">';
+		print '<span class="fas fa-spinner fa-spin"></span> '.$langs->trans('AILoading');
+		print '</div>';
+
+		// Drawer result
+		print '<div class="lcrm-ai-result" id="lcrm-ai-drawer-result" style="display:none">';
+		print '<div class="lcrm-ai-result-header"><span class="lcrm-detail-label">'.$langs->trans('AIResultTitle').'</span></div>';
+		print '<div class="lcrm-ai-result-content" id="lcrm-ai-drawer-result-content"></div>';
+		print '<div class="lcrm-ai-result-actions">';
+		print '<button type="button" class="button" id="lcrm-ai-drawer-insert"><span class="fas fa-check"></span> '.$langs->trans('AIInsertInSummary').'</button>';
+		print '<button type="button" class="button" id="lcrm-ai-drawer-copy"><span class="fas fa-copy"></span> '.$langs->trans('AICopyMessage').'</button>';
+		print '<button type="button" class="button" id="lcrm-ai-drawer-regenerate"><span class="fas fa-sync-alt"></span> '.$langs->trans('AIRegenerate').'</button>';
+		print '</div>';
+		print '</div>';
+
+		// Conversation history in drawer
+		print '<div class="lcrm-detail-group" style="margin-top:16px">';
+		print '<span class="lcrm-detail-label">'.$langs->trans('AIConversationHistory').'</span>';
+		print '<div id="lcrm-ai-drawer-history" class="lcrm-ai-history">';
+		// Load history if thirdparty is set
+		if ($curSoc > 0) {
+			$histSql = "SELECT i.interaction_type, i.summary, i.direction, i.date_interaction, i.sentiment";
+			$histSql .= " FROM ".MAIN_DB_PREFIX."lemoncrm_interaction as i";
+			$histSql .= " WHERE i.fk_soc = ".((int) $curSoc);
+			if ($curContact > 0) {
+				$histSql .= " AND (i.fk_socpeople = ".((int) $curContact)." OR i.fk_socpeople IS NULL)";
+			}
+			$histSql .= " ORDER BY i.date_interaction DESC LIMIT 10";
+			$histResql = $db->query($histSql);
+			if ($histResql) {
+				$hasHistory = false;
+				while ($hObj = $db->fetch_object($histResql)) {
+					$hasHistory = true;
+					$hDir = ($hObj->direction === 'IN') ? 'Recu' : 'Envoye';
+					$hIcon = $typeIcons[$hObj->interaction_type] ?? 'far fa-comment';
+					$hDate = dol_print_date($db->jdate($hObj->date_interaction), 'dayhour');
+					$hSummary = dol_trunc(strip_tags($hObj->summary), 120);
+					print '<div class="lcrm-ai-history-item lcrm-ai-history-'.strtolower($hObj->direction).'">';
+					print '<div class="lcrm-ai-history-meta"><span class="'.$hIcon.'"></span> '.$hDate.' - '.$hDir.'</div>';
+					print '<div class="lcrm-ai-history-text">'.$hSummary.'</div>';
+					print '</div>';
+				}
+				if (!$hasHistory) {
+					print '<div class="opacitymedium">Aucun historique</div>';
+				}
+			}
+		} else {
+			print '<div class="opacitymedium">Selectionnez un tiers pour voir l\'historique</div>';
+		}
+		print '</div>';
+		print '</div>';
+
+		print '</div>'; // drawer-body
+		print '</div>'; // ai-drawer
+
+		// Pass AI config to JS
+		print '<script>';
+		print 'var lcrm_ai_url = "'.dol_escape_js(dol_buildpath('/lemoncrm/ajax/ai_generate.php', 1)).'";';
+		print 'var lcrm_ai_token = "'.currentToken().'";';
+		print '</script>';
+	}
+
 	// ===== TIER 2 : Details (expandable) =====
 	print '<div class="lcrm-details-toggle" id="lcrm-toggle-details">';
 	print '<span class="fa fa-chevron-down"></span> Plus de détails';
