@@ -82,26 +82,54 @@ llxHeader('', $langs->trans("LemonCRMSetup"));
 $head = lemoncrm_admin_prepare_head();
 print dol_get_fiche_head($head, ($mode == 'about' ? 'about' : 'settings'), $langs->trans("LemonCRMSetup"), -1, 'object_lemoncrm@lemoncrm');
 
+// Bandeau "Nouvelle version disponible" (visible sur les deux onglets)
+require_once dirname(__DIR__).'/core/modules/modLemonCRM.class.php';
+$modDesc = new modLemonCRM($db);
+$updateInfo = lemoncrm_check_latest_release($db, $modDesc->version);
+if ($updateInfo !== null) {
+	print '<div class="warning" style="margin:8px 0;padding:10px;border-left:4px solid #e67e22;background:#fff3e0;">';
+	print '<strong>'.$langs->trans("LemonCRMUpdateAvailable").'</strong> : ';
+	print $langs->trans("LemonCRMUpdateAvailableMsg", dol_escape_htmltag($updateInfo['version']), dol_escape_htmltag($modDesc->version));
+	print ' <a href="'.dol_escape_htmltag($updateInfo['url']).'" target="_blank" rel="noopener">'.$langs->trans("LemonCRMUpdateSeeRelease").'</a>';
+	print '</div>';
+}
+
 if ($mode == 'about') {
 	print '<div class="fichecenter">';
-	print '<p><strong>LemonCRM</strong> v1.0.1</p>';
+	print '<p><strong>LemonCRM</strong> v'.dol_escape_htmltag($modDesc->version).'</p>';
 	print '<p>Module de suivi des interactions clients et prospects pour Dolibarr.</p>';
-	print '<p>Developpeur : SASU LEMON - <a href="https://hellolemon.fr" target="_blank">hellolemon.fr</a></p>';
+	print '<p>Développeur : SASU LEMON - <a href="https://hellolemon.fr" target="_blank">hellolemon.fr</a></p>';
 	print '<p>Contributeur : protectora</p>';
 
 	print '<br><h3>Dictionnaires</h3>';
 	print '<table class="noborder centpercent">';
-	print '<tr class="liste_titre"><td>Dictionnaire</td><td>Ou le trouver</td><td>Usage</td></tr>';
+	print '<tr class="liste_titre"><td>Dictionnaire</td><td>Où le trouver</td><td>Usage</td></tr>';
 	print '<tr class="oddeven"><td><strong>Types d\'interaction</strong></td>';
-	print '<td><a href="'.DOL_URL_ROOT.'/admin/dict.php?mainmenu=home&id=25">Admin > Dictionnaires > Types d\'evenements de l\'agenda</a></td>';
-	print '<td>Les types LemonCRM utilisent le prefixe <strong>LCRM_</strong> (LCRM_TEL, LCRM_EMAIL, etc.). Seuls ces types apparaissent dans le Quicklog. Pour ajouter un type, creez-le avec un code commencant par LCRM_.</td></tr>';
+	print '<td><a href="'.DOL_URL_ROOT.'/admin/dict.php?mainmenu=home&id=25">Admin > Dictionnaires > Types d\'évènements de l\'agenda</a></td>';
+	print '<td>Les types LemonCRM utilisent le préfixe <strong>LCRM_</strong> (LCRM_TEL, LCRM_EMAIL, etc.). Seuls ces types apparaissent dans le Quicklog. Pour ajouter un type, créez-le avec un code commençant par LCRM_.</td></tr>';
 	print '<tr class="oddeven"><td><strong>Sentiments</strong></td>';
 	print '<td><a href="'.DOL_URL_ROOT.'/admin/dict.php?mainmenu=home">Admin > Dictionnaires > Sentiments CRM</a></td>';
-	print '<td>Sentiments associes aux interactions (positif, neutre, negatif, ou personnalises).</td></tr>';
+	print '<td>Sentiments associés aux interactions (positif, neutre, négatif, ou personnalisés).</td></tr>';
 	print '<tr class="oddeven"><td><strong>Statuts prospect</strong></td>';
 	print '<td><a href="'.DOL_URL_ROOT.'/admin/dict.php?mainmenu=home">Admin > Dictionnaires > Statuts prospect CRM</a></td>';
-	print '<td>Etapes du cycle de vente (cold, warm, hot, negotiation, won, lost, ou personnalises).</td></tr>';
+	print '<td>Étapes du cycle de vente (cold, warm, hot, negotiation, won, lost, ou personnalisés).</td></tr>';
 	print '</table>';
+	print '</div>';
+
+	// Bloc "À propos de Lemon" — vitrine éditeur (standard Lemon)
+	print '<div style="margin:30px 0;padding:20px 25px;border:1px solid #e0e0e0;border-left:4px solid #FFD21F;border-radius:6px;background:linear-gradient(135deg,#fffef7 0%,#fafafa 100%);">';
+	print '<h3 style="margin:0 0 10px 0;color:#333;">'.$langs->trans("LemonCRMAboutTitle").'</h3>';
+	print '<p style="margin:0 0 12px 0;color:#555;">'.$langs->trans("LemonCRMAboutIntro").'</p>';
+	print '<ul style="margin:0 0 15px 20px;color:#555;">';
+	print '<li><strong>'.$langs->trans("LemonCRMAboutSvc1Title").'</strong> : '.$langs->trans("LemonCRMAboutSvc1Desc").'</li>';
+	print '<li><strong>'.$langs->trans("LemonCRMAboutSvc2Title").'</strong> : '.$langs->trans("LemonCRMAboutSvc2Desc").'</li>';
+	print '<li><strong>'.$langs->trans("LemonCRMAboutSvc3Title").'</strong> : '.$langs->trans("LemonCRMAboutSvc3Desc").'</li>';
+	print '<li><strong>'.$langs->trans("LemonCRMAboutSvc4Title").'</strong> : '.$langs->trans("LemonCRMAboutSvc4Desc").'</li>';
+	print '</ul>';
+	print '<p style="margin:0;">';
+	print '<a href="https://hellolemon.fr" target="_blank" rel="noopener" class="butAction" style="text-decoration:none;">'.$langs->trans("LemonCRMAboutCTA").'</a>';
+	print ' <span style="color:#999;margin-left:15px;">'.$langs->trans("LemonCRMAboutLocation").'</span>';
+	print '</p>';
 	print '</div>';
 } else {
 	$linkback = '<a href="'.DOL_URL_ROOT.'/admin/modules.php?restore_lastsearch_values=1">'.$langs->trans("BackToModuleList").'</a>';

@@ -6,6 +6,68 @@
  */
 
 /**
+ *  Vérifie si une version plus récente du module existe sur GitHub.
+ *
+ *  Appel de l'API publique GitHub releases/latest, mise en cache 24h dans une
+ *  constante Dolibarr pour ne pas marteler l'API à chaque ouverture de la page
+ *  admin. Retourne silencieusement null si l'API est inaccessible.
+ *
+ *  @param  DoliDB  $db              Handle BDD Dolibarr
+ *  @param  string  $currentVersion  Version actuelle du module
+ *  @return array|null               ['version' => 'x.y.z', 'url' => '...'] ou null
+ */
+function lemoncrm_check_latest_release($db, $currentVersion)
+{
+	$now = time();
+	$cacheRaw = getDolGlobalString('LEMONCRM_UPDATE_CHECK_CACHE', '');
+	$cache = !empty($cacheRaw) ? json_decode($cacheRaw, true) : null;
+
+	$latest = null;
+	$htmlUrl = '';
+	if (is_array($cache) && isset($cache['ts']) && ($now - (int) $cache['ts']) < 86400) {
+		$latest  = $cache['version'] ?? null;
+		$htmlUrl = $cache['url']     ?? '';
+	} else {
+		$url = 'https://api.github.com/repos/hello-lemon/module-dolibarr-lemoncrm/releases/latest';
+		$ch = curl_init($url);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLOPT_USERAGENT, 'LemonCRM-UpdateCheck');
+		curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+		curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+		curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+		$json = @curl_exec($ch);
+		$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+		curl_close($ch);
+
+		if ($httpCode !== 200 || empty($json)) {
+			return null;
+		}
+		$data = json_decode($json, true);
+		if (!is_array($data) || empty($data['tag_name'])) {
+			return null;
+		}
+		$latest  = ltrim($data['tag_name'], 'v');
+		$htmlUrl = $data['html_url'] ?? '';
+		if (!preg_match('#^https://github\.com/hello-lemon/module-dolibarr-lemoncrm/#', $htmlUrl)) {
+			$htmlUrl = 'https://github.com/hello-lemon/module-dolibarr-lemoncrm/releases';
+		}
+
+		dolibarr_set_const($db, 'LEMONCRM_UPDATE_CHECK_CACHE', json_encode([
+			'ts'      => $now,
+			'version' => $latest,
+			'url'     => $htmlUrl,
+		]), 'chaine', 0, '', 0);
+	}
+
+	if (!empty($latest) && version_compare($latest, $currentVersion, '>')) {
+		return ['version' => $latest, 'url' => $htmlUrl];
+	}
+	return null;
+}
+
+
+/**
  * Prepare admin pages header (tabs)
  *
  * @return array

@@ -99,3 +99,21 @@ ConfirmDeleteInteraction = Êtes-vous sûr de vouloir supprimer cette interactio
 InteractionDeleted = Interaction supprimée
 InteractionCreated = Interaction créée
 InteractionUpdated = Interaction mise à jour
+
+# Mise à jour et vitrine éditeur (standard Lemon)
+LemonCRMUpdateAvailable = Nouvelle version disponible
+LemonCRMUpdateAvailableMsg = la version %s est disponible sur GitHub (version installée : %s).
+LemonCRMUpdateSeeRelease = Voir les notes de version
+
+LemonCRMAboutTitle = À propos de Lemon
+LemonCRMAboutIntro = Lemon est une agence web et communication à Clermont-Ferrand. Nous développons ce module gratuitement pour la communauté Dolibarr, et nous accompagnons aussi les entreprises sur l'ensemble de leur présence en ligne.
+LemonCRMAboutSvc1Title = Sites web et applications
+LemonCRMAboutSvc1Desc = sites vitrines, e-commerce, applications métier sur mesure
+LemonCRMAboutSvc2Title = Dolibarr expert
+LemonCRMAboutSvc2Desc = modules custom, intégrations, formation et support
+LemonCRMAboutSvc3Title = Communication et branding
+LemonCRMAboutSvc3Desc = identité visuelle, stratégie, print, réseaux sociaux
+LemonCRMAboutSvc4Title = Fabrication et maker
+LemonCRMAboutSvc4Desc = impression 3D, découpe laser, prototypage, objets connectés
+LemonCRMAboutCTA = Découvrir Lemon sur hellolemon.fr
+LemonCRMAboutLocation = Clermont-Ferrand, France - depuis 2012
