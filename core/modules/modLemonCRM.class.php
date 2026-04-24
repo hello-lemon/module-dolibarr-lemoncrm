@@ -26,7 +26,7 @@ class modLemonCRM extends DolibarrModules
 		$this->name = preg_replace('/^mod/i', '', get_class($this));
 		$this->description = "Suivi des interactions clients et prospects";
 		$this->descriptionlong = "Module CRM pour logger les échanges (tel, email, LinkedIn, Teams, RDV), gérer les relances et suivre les prospects.";
-		$this->version = '1.1.0';
+		$this->version = '1.1.1';
 		$this->const_name = 'MAIN_MODULE_'.strtoupper($this->name);
 		$this->picto = 'fa-comments';
 		$this->editor_name = 'Lemon';

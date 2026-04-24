@@ -125,6 +125,7 @@ if ($mode == 'about') {
 	print '<li><strong>'.$langs->trans("LemonCRMAboutSvc2Title").'</strong> : '.$langs->trans("LemonCRMAboutSvc2Desc").'</li>';
 	print '<li><strong>'.$langs->trans("LemonCRMAboutSvc3Title").'</strong> : '.$langs->trans("LemonCRMAboutSvc3Desc").'</li>';
 	print '<li><strong>'.$langs->trans("LemonCRMAboutSvc4Title").'</strong> : '.$langs->trans("LemonCRMAboutSvc4Desc").'</li>';
+	print '<li><strong>'.$langs->trans("LemonCRMAboutSvc5Title").'</strong> : '.$langs->trans("LemonCRMAboutSvc5Desc").'</li>';
 	print '</ul>';
 	print '<p style="margin:0;">';
 	print '<a href="https://hellolemon.fr" target="_blank" rel="noopener" class="butAction" style="text-decoration:none;">'.$langs->trans("LemonCRMAboutCTA").'</a>';
