@@ -319,3 +319,38 @@ function lemoncrm_get_call_outcomes()
 {
 	return array('connected' => 'Joint', 'voicemail' => 'Messagerie', 'no_answer' => 'Pas de réponse', 'busy' => 'Occupé');
 }
+
+/**
+ * Load active rows from one of the LemonCRM dictionaries
+ * (c_lemoncrm_sentiment, c_lemoncrm_prospect_status).
+ *
+ * Returns rows indexed numerically (with id/code/label/color keys),
+ * or indexed by `code` when $indexByCode is true.
+ *
+ * @param DoliDB $db          Database handler
+ * @param string $table       Dictionary table name (without MAIN_DB_PREFIX)
+ * @param bool   $indexByCode If true, key the result by the row's `code`
+ * @return array
+ */
+function lemoncrm_load_dict($db, $table, $indexByCode = false)
+{
+	$items = array();
+	$sql = "SELECT rowid, code, label, color FROM ".MAIN_DB_PREFIX.$table;
+	$sql .= " WHERE active = 1 ORDER BY position ASC, rowid ASC";
+
+	$resql = $db->query($sql);
+	if (!$resql) {
+		return $items;
+	}
+
+	while ($obj = $db->fetch_object($resql)) {
+		$row = array('id' => $obj->rowid, 'code' => $obj->code, 'label' => $obj->label, 'color' => $obj->color);
+		if ($indexByCode) {
+			$items[$obj->code] = $row;
+		} else {
+			$items[] = $row;
+		}
+	}
+
+	return $items;
+}

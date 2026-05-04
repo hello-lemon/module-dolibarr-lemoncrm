@@ -60,6 +60,22 @@ class LemonCRMInteraction extends CommonObject
 	}
 
 	/**
+	 * SQL fragment for nullable string: quoted+escaped value or NULL.
+	 */
+	private function sqlNullableString($value)
+	{
+		return !empty($value) ? "'".$this->db->escape($value)."'" : "NULL";
+	}
+
+	/**
+	 * SQL fragment for nullable foreign key: positive int or NULL.
+	 */
+	private function sqlNullableFk($value)
+	{
+		return ($value > 0) ? ((int) $value) : "NULL";
+	}
+
+	/**
 	 * Create interaction in database + actioncomm (double ecriture)
 	 *
 	 * @param User $user User creating
@@ -98,27 +114,27 @@ class LemonCRMInteraction extends CommonObject
 			$sql .= " sentiment, prospect_status, fk_parent, fk_project, status, datec, entity";
 			$sql .= ") VALUES (";
 			$sql .= "'".$this->db->escape($this->ref)."',";
-			$sql .= " ".((int)$this->fk_actioncomm).",";
+			$sql .= " ".((int) $this->fk_actioncomm).",";
 			$sql .= " '".$this->db->escape($this->interaction_type)."',";
-			$sql .= " ".($this->fk_soc > 0 ? ((int)$this->fk_soc) : "NULL").",";
-			$sql .= " ".($this->fk_socpeople > 0 ? ((int)$this->fk_socpeople) : "NULL").",";
-			$sql .= " ".((int)$this->fk_user_author).",";
-			$sql .= " ".(!empty($this->summary) ? "'".$this->db->escape($this->summary)."'" : "NULL").",";
-			$sql .= " ".(!empty($this->followup_action) ? "'".$this->db->escape($this->followup_action)."'" : "NULL").",";
-			$sql .= " ".(!empty($this->followup_date) ? "'".$this->db->escape($this->followup_date)."'" : "NULL").",";
-			$sql .= " ".(!empty($this->followup_time) ? "'".$this->db->escape($this->followup_time)."'" : "NULL").",";
-			$sql .= " ".((int)$this->followup_done).",";
-			$sql .= " ".(!empty($this->followup_mode) ? "'".$this->db->escape($this->followup_mode)."'" : "NULL").",";
+			$sql .= " ".$this->sqlNullableFk($this->fk_soc).",";
+			$sql .= " ".$this->sqlNullableFk($this->fk_socpeople).",";
+			$sql .= " ".((int) $this->fk_user_author).",";
+			$sql .= " ".$this->sqlNullableString($this->summary).",";
+			$sql .= " ".$this->sqlNullableString($this->followup_action).",";
+			$sql .= " ".$this->sqlNullableString($this->followup_date).",";
+			$sql .= " ".$this->sqlNullableString($this->followup_time).",";
+			$sql .= " ".((int) $this->followup_done).",";
+			$sql .= " ".$this->sqlNullableString($this->followup_mode).",";
 			$sql .= " '".$this->db->idate($this->date_interaction)."',";
-			$sql .= " ".((int)$this->duration_minutes).",";
+			$sql .= " ".((int) $this->duration_minutes).",";
 			$sql .= " '".$this->db->escape($this->direction)."',";
-			$sql .= " ".(!empty($this->sentiment) ? "'".$this->db->escape($this->sentiment)."'" : "NULL").",";
-			$sql .= " ".(!empty($this->prospect_status) ? "'".$this->db->escape($this->prospect_status)."'" : "NULL").",";
-			$sql .= " ".($this->fk_parent > 0 ? ((int)$this->fk_parent) : "NULL").",";
-			$sql .= " ".($this->fk_project > 0 ? ((int)$this->fk_project) : "NULL").",";
-			$sql .= " ".((int)$this->status).",";
+			$sql .= " ".$this->sqlNullableString($this->sentiment).",";
+			$sql .= " ".$this->sqlNullableString($this->prospect_status).",";
+			$sql .= " ".$this->sqlNullableFk($this->fk_parent).",";
+			$sql .= " ".$this->sqlNullableFk($this->fk_project).",";
+			$sql .= " ".((int) $this->status).",";
 			$sql .= " '".$this->db->idate($this->datec)."',";
-			$sql .= " ".((int)$this->entity);
+			$sql .= " ".((int) $this->entity);
 			$sql .= ")";
 
 			$resql = $this->db->query($sql);
@@ -175,7 +191,8 @@ class LemonCRMInteraction extends CommonObject
 	}
 
 	/**
-	 * Generate label for actioncomm
+	 * Generate label for actioncomm.
+	 * Format: "Type (sortant) - resume tronque"
 	 *
 	 * @return string
 	 */
@@ -185,14 +202,9 @@ class LemonCRMInteraction extends CommonObject
 		$langs->load('lemoncrm@lemoncrm');
 
 		$typeLabel = $langs->trans($this->interaction_type);
-		if ($typeLabel == $this->interaction_type) {
-			$typeLabel = $this->interaction_type;
-		}
-
 		$dirLabel = ($this->direction == 'IN') ? '(entrant)' : '(sortant)';
-
-		// Clean label: "Appel telephonique (sortant) - resume tronque"
 		$label = $typeLabel.' '.$dirLabel;
+
 		if (!empty($this->summary)) {
 			$shortSummary = dol_trunc(str_replace(array("\r\n", "\n", "\r"), ' ', $this->summary), 60);
 			$label .= ' - '.$shortSummary;
@@ -215,21 +227,21 @@ class LemonCRMInteraction extends CommonObject
 
 		$sql = "UPDATE ".MAIN_DB_PREFIX."lemoncrm_interaction SET";
 		$sql .= " interaction_type = '".$this->db->escape($this->interaction_type)."',";
-		$sql .= " fk_soc = ".($this->fk_soc > 0 ? ((int)$this->fk_soc) : "NULL").",";
-		$sql .= " fk_socpeople = ".($this->fk_socpeople > 0 ? ((int)$this->fk_socpeople) : "NULL").",";
-		$sql .= " summary = ".(!empty($this->summary) ? "'".$this->db->escape($this->summary)."'" : "NULL").",";
-		$sql .= " followup_action = ".(!empty($this->followup_action) ? "'".$this->db->escape($this->followup_action)."'" : "NULL").",";
-		$sql .= " followup_date = ".(!empty($this->followup_date) ? "'".$this->db->escape($this->followup_date)."'" : "NULL").",";
-		$sql .= " followup_time = ".(!empty($this->followup_time) ? "'".$this->db->escape($this->followup_time)."'" : "NULL").",";
-		$sql .= " followup_done = ".((int)$this->followup_done).",";
-		$sql .= " followup_mode = ".(!empty($this->followup_mode) ? "'".$this->db->escape($this->followup_mode)."'" : "NULL").",";
+		$sql .= " fk_soc = ".$this->sqlNullableFk($this->fk_soc).",";
+		$sql .= " fk_socpeople = ".$this->sqlNullableFk($this->fk_socpeople).",";
+		$sql .= " summary = ".$this->sqlNullableString($this->summary).",";
+		$sql .= " followup_action = ".$this->sqlNullableString($this->followup_action).",";
+		$sql .= " followup_date = ".$this->sqlNullableString($this->followup_date).",";
+		$sql .= " followup_time = ".$this->sqlNullableString($this->followup_time).",";
+		$sql .= " followup_done = ".((int) $this->followup_done).",";
+		$sql .= " followup_mode = ".$this->sqlNullableString($this->followup_mode).",";
 		$sql .= " date_interaction = '".$this->db->idate($this->date_interaction)."',";
-		$sql .= " duration_minutes = ".((int)$this->duration_minutes).",";
+		$sql .= " duration_minutes = ".((int) $this->duration_minutes).",";
 		$sql .= " direction = '".$this->db->escape($this->direction)."',";
-		$sql .= " sentiment = ".(!empty($this->sentiment) ? "'".$this->db->escape($this->sentiment)."'" : "NULL").",";
-		$sql .= " prospect_status = ".(!empty($this->prospect_status) ? "'".$this->db->escape($this->prospect_status)."'" : "NULL").",";
-		$sql .= " status = ".((int)$this->status);
-		$sql .= " WHERE rowid = ".((int)$this->id);
+		$sql .= " sentiment = ".$this->sqlNullableString($this->sentiment).",";
+		$sql .= " prospect_status = ".$this->sqlNullableString($this->prospect_status).",";
+		$sql .= " status = ".((int) $this->status);
+		$sql .= " WHERE rowid = ".((int) $this->id);
 
 		$resql = $this->db->query($sql);
 		if (!$resql) {

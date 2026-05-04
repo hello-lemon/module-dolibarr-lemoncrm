@@ -410,16 +410,15 @@ foreach ($rawRows as $obj) {
 	}
 }
 
-// Load dictionaries
+// Load dictionaries indexed by code (each row is a stdClass with label/color/...).
 $sentimentDict = array();
-$sqlsd = "SELECT code, label, color FROM ".MAIN_DB_PREFIX."c_lemoncrm_sentiment WHERE active = 1";
-$ressd = $db->query($sqlsd);
-if ($ressd) { while ($o = $db->fetch_object($ressd)) $sentimentDict[$o->code] = $o; }
-
 $prospectDict = array();
-$sqlpd = "SELECT code, label, color FROM ".MAIN_DB_PREFIX."c_lemoncrm_prospect_status WHERE active = 1";
-$respd = $db->query($sqlpd);
-if ($respd) { while ($o = $db->fetch_object($respd)) $prospectDict[$o->code] = $o; }
+foreach (lemoncrm_load_dict($db, 'c_lemoncrm_sentiment', true) as $code => $row) {
+	$sentimentDict[$code] = (object) $row;
+}
+foreach (lemoncrm_load_dict($db, 'c_lemoncrm_prospect_status', true) as $code => $row) {
+	$prospectDict[$code] = (object) $row;
+}
 
 $param = '';
 if ($socid > 0) $param .= '&socid='.$socid;

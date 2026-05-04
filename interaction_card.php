@@ -51,25 +51,39 @@ if ($id > 0) {
 
 $form = new Form($db);
 
-/*
- * Actions
+/**
+ * Render a small "saved" confirmation page for popup/drawer mode and exit.
+ * Notifies the opener via postMessage and auto-closes the window.
  */
+function lemoncrm_render_popup_saved(string $message): void
+{
+	print '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>';
+	print '<div style="padding:40px;text-align:center;font-family:sans-serif;">';
+	print '<div style="font-size:2em;margin-bottom:10px;">&#10003;</div>';
+	print '<div style="font-weight:600;">'.dol_escape_htmltag($message).'</div>';
+	print '</div>';
+	print '<script>if(window.opener){window.opener.postMessage("lcrm_saved","*");}setTimeout(function(){ window.close(); }, 800);</script>';
+	print '</body></html>';
+	exit;
+}
 
-// Create
-if ($action == 'add' && $user->hasRight('lemoncrm', 'interaction', 'write')) {
-	if (GETPOST('token', 'alpha') != newToken()) {
-		accessforbidden('Bad value for CSRF token');
-	}
-
+/**
+ * Hydrate the interaction object from the submitted form fields.
+ * Used by both create and update flows.
+ */
+function lemoncrm_hydrate_interaction_from_post(LemonCRMInteraction $object): void
+{
 	$object->interaction_type = GETPOST('interaction_type', 'alpha');
-	// Fallback: try reading from hidden backup field
 	if (empty($object->interaction_type)) {
+		// Fallback: hidden backup field
 		$object->interaction_type = GETPOST('interaction_type_backup', 'alpha');
 	}
 	$object->fk_soc = GETPOSTINT('fk_soc');
 	$object->fk_socpeople = GETPOSTINT('fk_socpeople');
 	$object->direction = GETPOST('direction', 'alpha');
-	if (empty($object->direction)) $object->direction = 'OUT';
+	if (empty($object->direction)) {
+		$object->direction = 'OUT';
+	}
 	$object->date_interaction = dol_mktime(
 		GETPOSTINT('date_interactionhour'), GETPOSTINT('date_interactionmin'), 0,
 		GETPOSTINT('date_interactionmonth'), GETPOSTINT('date_interactionday'), GETPOSTINT('date_interactionyear')
@@ -82,6 +96,19 @@ if ($action == 'add' && $user->hasRight('lemoncrm', 'interaction', 'write')) {
 	$object->followup_mode = GETPOST('followup_mode', 'alpha');
 	$object->sentiment = GETPOST('sentiment', 'alpha');
 	$object->prospect_status = GETPOST('prospect_status', 'alpha');
+}
+
+/*
+ * Actions
+ */
+
+// Create
+if ($action == 'add' && $user->hasRight('lemoncrm', 'interaction', 'write')) {
+	if (GETPOST('token', 'alpha') != newToken()) {
+		accessforbidden('Bad value for CSRF token');
+	}
+
+	lemoncrm_hydrate_interaction_from_post($object);
 	$fkParent = GETPOSTINT('fk_parent');
 	if ($fkParent > 0) {
 		// Keep flat: if parent is itself a child, use its parent instead
@@ -113,15 +140,7 @@ if ($action == 'add' && $user->hasRight('lemoncrm', 'interaction', 'write')) {
 		$result = $object->create($user);
 		if ($result > 0) {
 			if ($popupMode) {
-				// Close popup window after save
-				print '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>';
-				print '<div style="padding:40px;text-align:center;font-family:sans-serif;">';
-				print '<div style="font-size:2em;margin-bottom:10px;">&#10003;</div>';
-				print '<div style="font-weight:600;">Interaction enregistr&eacute;e</div>';
-				print '</div>';
-				print '<script>if(window.opener){window.opener.postMessage("lcrm_saved","*");}setTimeout(function(){ window.close(); }, 800);</script>';
-				print '</body></html>';
-				exit;
+				lemoncrm_render_popup_saved('Interaction enregistrée');
 			}
 			if ($drawerMode) {
 				print '<html><body><script>parent.postMessage("lcrm_saved", "*");</script></body></html>';
@@ -143,34 +162,12 @@ if ($action == 'update' && $user->hasRight('lemoncrm', 'interaction', 'write')) 
 		accessforbidden('Bad value for CSRF token');
 	}
 
-	$object->interaction_type = GETPOST('interaction_type', 'alpha');
-	$object->fk_soc = GETPOSTINT('fk_soc');
-	$object->fk_socpeople = GETPOSTINT('fk_socpeople');
-	$object->direction = GETPOST('direction', 'aZ');
-	$object->date_interaction = dol_mktime(
-		GETPOSTINT('date_interactionhour'), GETPOSTINT('date_interactionmin'), 0,
-		GETPOSTINT('date_interactionmonth'), GETPOSTINT('date_interactionday'), GETPOSTINT('date_interactionyear')
-	);
-	$object->duration_minutes = GETPOSTINT('duration_minutes');
-	$object->summary = GETPOST('summary', 'restricthtml');
-	$object->followup_action = GETPOST('followup_action', 'restricthtml');
-	$object->followup_date = GETPOST('followup_date', 'alpha');
-	$object->followup_time = GETPOST('followup_time', 'alpha');
-	$object->followup_mode = GETPOST('followup_mode', 'alpha');
-	$object->sentiment = GETPOST('sentiment', 'alpha');
-	$object->prospect_status = GETPOST('prospect_status', 'alpha');
+	lemoncrm_hydrate_interaction_from_post($object);
 
 	$result = $object->update($user);
 	if ($result > 0) {
 		if ($popupMode || $drawerMode) {
-			print '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>';
-			print '<div style="padding:40px;text-align:center;font-family:sans-serif;">';
-			print '<div style="font-size:2em;margin-bottom:10px;">&#10003;</div>';
-			print '<div style="font-weight:600;">Interaction mise à jour</div>';
-			print '</div>';
-			print '<script>if(window.opener){window.opener.postMessage("lcrm_saved","*");}setTimeout(function(){ window.close(); }, 800);</script>';
-			print '</body></html>';
-			exit;
+			lemoncrm_render_popup_saved('Interaction mise à jour');
 		}
 		setEventMessages($langs->trans('InteractionUpdated'), null, 'mesgs');
 		header("Location: ".dol_buildpath('/lemoncrm/interaction_card.php', 1).'?id='.$object->id);
@@ -209,22 +206,7 @@ if ($action == 'followup_done' && $user->hasRight('lemoncrm', 'interaction', 'wr
 	}
 }
 
-/*
- * Load dictionaries from DB
- */
-function lemoncrm_load_dict($db, $table) {
-	$items = array();
-	$sql = "SELECT rowid, code, label, color FROM ".MAIN_DB_PREFIX.$table;
-	$sql .= " WHERE active = 1 ORDER BY position ASC, rowid ASC";
-	$resql = $db->query($sql);
-	if ($resql) {
-		while ($obj = $db->fetch_object($resql)) {
-			$items[] = array('id' => $obj->rowid, 'code' => $obj->code, 'label' => $obj->label, 'color' => $obj->color);
-		}
-	}
-	return $items;
-}
-
+// Load dictionaries from DB (helper lives in lib/lemoncrm.lib.php)
 $sentimentList = lemoncrm_load_dict($db, 'c_lemoncrm_sentiment');
 $prospectStatusList = lemoncrm_load_dict($db, 'c_lemoncrm_prospect_status');
 
