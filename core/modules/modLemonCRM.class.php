@@ -19,7 +19,7 @@ class modLemonCRM extends DolibarrModules
 		global $conf;
 
 		$this->db = $db;
-		$this->numero = 500210;
+		$this->numero = 210002;
 		$this->rights_class = 'lemoncrm';
 		$this->family = "crm";
 		$this->module_position = '50';
