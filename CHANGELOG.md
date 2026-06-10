@@ -2,6 +2,16 @@
 
 Toutes les modifications notables du module sont listees ici.
 
+## [2.1.0] - 2026-06-10
+
+### Ajoute
+- **Lien projet exploite de bout en bout** (la colonne `fk_project` existait depuis la v2 mais n'etait jamais ecrite ni lue) :
+  - `createActionComm()` / `updateActionComm()` propagent `fk_project` -> l'evenement agenda apparait sur la fiche projet Dolibarr
+  - `update()` persiste `fk_project`
+  - Fiche interaction : selecteur « Projet lie » (projets ouverts) dans « Plus de details », projet affiche dans la vue
+  - Liste des interactions : colonne Projet (jointure `llx_projet`, triable)
+- Compatible avec le pont temps du module LemonDeck 1.2.0 (`POST /lemondeck/interaction` avec `fk_project`)
+
 ## [1.0.1] - 2026-03-30
 
 ### Securite
