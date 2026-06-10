@@ -179,6 +179,9 @@ class LemonCRMInteraction extends CommonObject
 		$actioncomm->note_private = $this->summary;
 		$actioncomm->percentage = 100; // Done
 		$actioncomm->userownerid = $user->id;
+		if ($this->fk_project > 0) {
+			$actioncomm->fk_project = $this->fk_project; // visible sur le projet dans l'agenda
+		}
 
 		$result = $actioncomm->create($user);
 		if ($result < 0) {
@@ -240,6 +243,7 @@ class LemonCRMInteraction extends CommonObject
 		$sql .= " direction = '".$this->db->escape($this->direction)."',";
 		$sql .= " sentiment = ".$this->sqlNullableString($this->sentiment).",";
 		$sql .= " prospect_status = ".$this->sqlNullableString($this->prospect_status).",";
+		$sql .= " fk_project = ".$this->sqlNullableFk($this->fk_project).",";
 		$sql .= " status = ".((int) $this->status);
 		$sql .= " WHERE rowid = ".((int) $this->id);
 
@@ -284,6 +288,7 @@ class LemonCRMInteraction extends CommonObject
 			$actioncomm->socid = $this->fk_soc;
 			$actioncomm->contact_id = $this->fk_socpeople > 0 ? $this->fk_socpeople : 0;
 			$actioncomm->note_private = $this->summary;
+			$actioncomm->fk_project = ($this->fk_project > 0) ? $this->fk_project : 0;
 			return $actioncomm->update($user);
 		}
 		return 0;

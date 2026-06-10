@@ -96,6 +96,7 @@ function lemoncrm_hydrate_interaction_from_post(LemonCRMInteraction $object): vo
 	$object->followup_mode = GETPOST('followup_mode', 'alpha');
 	$object->sentiment = GETPOST('sentiment', 'alpha');
 	$object->prospect_status = GETPOST('prospect_status', 'alpha');
+	$object->fk_project = GETPOSTINT('fk_project');
 }
 
 /*
@@ -252,6 +253,7 @@ if ($action == 'create' || ($action == 'edit' && $id > 0)) {
 		$curDate = GETPOSTINT('linkedin_date');
 	}
 	$curDuration = $isEdit ? $object->duration_minutes : GETPOSTINT('duration_minutes');
+	$curProject = $isEdit ? (int) $object->fk_project : GETPOSTINT('fk_project');
 	$curSummary = $isEdit ? $object->summary : GETPOST('summary', 'restricthtml');
 	// LinkedIn extension: pre-fill summary from URL param
 	if (!$isEdit && empty($curSummary) && GETPOST('linkedin_summary', 'restricthtml')) {
@@ -485,6 +487,15 @@ if ($action == 'create' || ($action == 'edit' && $id > 0)) {
 	}
 	print '<button type="button" class="lcrm-pill lcrm-add-pill" data-dict="prospect_status" title="Ajouter"><span class="fa fa-plus"></span></button>';
 	print '</div>';
+	print '</div>';
+
+	// Projet lié (optionnel) : l'interaction et son événement agenda
+	// apparaissent alors sur la fiche projet
+	print '<div class="lcrm-detail-group">';
+	print '<span class="lcrm-detail-label">Projet lié</span>';
+	require_once DOL_DOCUMENT_ROOT.'/projet/class/html.formprojet.class.php';
+	$formproject = new FormProjets($db);
+	print $formproject->select_projects(-1, $curProject, 'fk_project', 0, 0, 1, 1);  // projets ouverts uniquement
 	print '</div>';
 
 	print '</div>'; // details
@@ -861,6 +872,13 @@ elseif ($id > 0) {
 		$contact = new Contact($db);
 		$contact->fetch($object->fk_socpeople);
 		print ' &middot; <span class="fa fa-user"></span> '.$contact->getNomUrl(1);
+	}
+	if ($object->fk_project > 0) {
+		require_once DOL_DOCUMENT_ROOT.'/projet/class/project.class.php';
+		$proj = new Project($db);
+		if ($proj->fetch($object->fk_project) > 0) {
+			print ' &middot; <span class="fa fa-folder-open-o"></span> '.$proj->getNomUrl(1);
+		}
 	}
 	print '</div>';
 

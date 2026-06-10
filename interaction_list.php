@@ -141,12 +141,14 @@ $typesAll = lemoncrm_get_interaction_types(false);
 $sql = "SELECT i.rowid, i.ref, i.interaction_type, i.fk_soc, i.fk_socpeople,";
 $sql .= " i.date_interaction, i.duration_minutes, i.direction, i.summary,";
 $sql .= " i.followup_date, i.followup_done, i.followup_mode, i.sentiment,";
-$sql .= " i.prospect_status,";
+$sql .= " i.prospect_status, i.fk_project,";
+$sql .= " p.ref as project_ref, p.title as project_title,";
 $sql .= " s.nom as thirdparty_name,";
 $sql .= " CONCAT(sp.firstname, ' ', sp.lastname) as contact_name";
 $sql .= " FROM ".MAIN_DB_PREFIX."lemoncrm_interaction as i";
 $sql .= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON i.fk_soc = s.rowid";
 $sql .= " LEFT JOIN ".MAIN_DB_PREFIX."socpeople as sp ON i.fk_socpeople = sp.rowid";
+$sql .= " LEFT JOIN ".MAIN_DB_PREFIX."projet as p ON i.fk_project = p.rowid";
 $sql .= " WHERE i.entity = ".$conf->entity;
 
 if ($socid > 0) {
@@ -233,6 +235,7 @@ print '</select></td>';
 
 // Thirdparty (if not filtered)
 if (!$socid) print '<td class="liste_titre"></td>';
+print '<td class="liste_titre"></td>'; // projet
 
 // Summary
 print '<td class="liste_titre"></td>';
@@ -257,6 +260,7 @@ print_liste_field_titre('', '', '', '', '', 'width="20"', '', ''); // expand ico
 print_liste_field_titre('DateInteraction', $_SERVER["PHP_SELF"], 'i.date_interaction', '', '', '', $sortfield, $sortorder);
 print_liste_field_titre('InteractionType', $_SERVER["PHP_SELF"], 'i.interaction_type', '', '', '', $sortfield, $sortorder);
 if (!$socid) print_liste_field_titre('ThirdParty', $_SERVER["PHP_SELF"], 's.nom', '', '', '', $sortfield, $sortorder);
+print_liste_field_titre('Project', $_SERVER["PHP_SELF"], 'p.ref', '', '', '', $sortfield, $sortorder);
 print_liste_field_titre('', '', '', '', '', '', '', ''); // summary preview
 print_liste_field_titre('FollowupDate', $_SERVER["PHP_SELF"], 'i.followup_date', '', '', '', $sortfield, $sortorder);
 print '</tr>';
@@ -276,7 +280,7 @@ $followup_modes = lemoncrm_get_followup_modes();
 
 // Rows
 $i = 0;
-$colcount = $socid ? 5 : 6;
+$colcount = $socid ? 6 : 7; // +1 : colonne Projet
 while ($i < min($num, $limit)) {
 	$obj = $db->fetch_object($resql);
 
@@ -322,6 +326,18 @@ while ($i < min($num, $limit)) {
 		}
 		print '</td>';
 	}
+
+	// Projet lié
+	print '<td class="tdoverflowmax150">';
+	if ($obj->fk_project > 0) {
+		require_once DOL_DOCUMENT_ROOT.'/projet/class/project.class.php';
+		$projTmp = new Project($db);
+		$projTmp->id = $obj->fk_project;
+		$projTmp->ref = $obj->project_ref;
+		$projTmp->title = $obj->project_title;
+		print $projTmp->getNomUrl(1, '', 1);
+	}
+	print '</td>';
 
 	// Summary preview (one-line, strip all newline types)
 	$previewSummary = str_replace(array("\r\n", "\r", "\n"), ' ', $obj->summary);
