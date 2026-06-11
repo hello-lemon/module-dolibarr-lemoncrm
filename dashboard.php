@@ -386,7 +386,8 @@ $sortableFields = array('i.date_interaction', 's.nom', 'i.interaction_type', 'i.
 if (!in_array($sortfield, $sortableFields, true)) {
 	$sortfield = 'i.date_interaction';
 }
-$threadSortOrder = ($sortorder == 'ASC') ? 'ASC' : 'DESC';
+// Les liens d'en-tête Dolibarr passent sortorder=asc en minuscules : comparer sans casse
+$threadSortOrder = (strtoupper($sortorder) == 'ASC') ? 'ASC' : 'DESC';
 $threadKey = "PARTITION BY COALESCE(i.fk_parent, i.rowid)";
 $sql .= " ORDER BY MAX(".$sortfield.") OVER (".$threadKey.") ".$threadSortOrder.",";
 if ($sortfield != 'i.date_interaction') {
