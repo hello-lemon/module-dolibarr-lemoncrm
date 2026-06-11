@@ -1,5 +1,9 @@
-Module500210Name = LemonCRM
-Module500210Desc = Suivi des interactions clients et prospects
+Module210002Name = LemonCRM
+Module210002Desc = Suivi des interactions clients et prospects
+
+# Box accueil
+BoxLemonCRMFollowups = Relances CRM à faire
+BoxNoFollowups = Aucune relance en attente
 
 # Setup
 LemonCRMSetup = Configuration LemonCRM

@@ -15,7 +15,7 @@ if (!$res) {
 }
 
 dol_include_once('/lemoncrm/class/lemoncrm_interaction.class.php');
-dol_include_once('/lemoncrm/lib/lemoncrm.lib.php');
+dol_include_once('/lemoncrm/core/lib/lemoncrm.lib.php');
 
 header('Content-Type: application/json; charset=UTF-8');
 
@@ -87,14 +87,20 @@ if ($action === 'attach' && $user->hasRight('lemoncrm', 'interaction', 'write'))
 		exit;
 	}
 
-	// Vérifier que le parent n'est pas un enfant (garder plat)
-	$sql = "SELECT fk_parent FROM ".MAIN_DB_PREFIX."lemoncrm_interaction WHERE rowid = ".(int)$parentId;
+	// Vérifier que le parent existe dans l'entité courante et n'est pas un enfant (garder plat)
+	$sql = "SELECT rowid, fk_parent FROM ".MAIN_DB_PREFIX."lemoncrm_interaction";
+	$sql .= " WHERE rowid = ".(int)$parentId." AND entity = ".((int) $conf->entity);
 	$resql = $db->query($sql);
-	if ($resql && ($obj = $db->fetch_object($resql)) && $obj->fk_parent > 0) {
+	if (!$resql || !($obj = $db->fetch_object($resql))) {
+		echo json_encode(['error' => 'Interaction parente introuvable']);
+		exit;
+	}
+	if ($obj->fk_parent > 0) {
 		$parentId = (int)$obj->fk_parent; // remonter au vrai parent
 	}
 
-	$sql = "UPDATE ".MAIN_DB_PREFIX."lemoncrm_interaction SET fk_parent = ".(int)$parentId." WHERE rowid = ".(int)$id;
+	$sql = "UPDATE ".MAIN_DB_PREFIX."lemoncrm_interaction SET fk_parent = ".(int)$parentId;
+	$sql .= " WHERE rowid = ".(int)$id." AND entity = ".((int) $conf->entity);
 	if ($db->query($sql)) {
 		echo json_encode(['success' => true, 'parent_id' => $parentId]);
 	} else {

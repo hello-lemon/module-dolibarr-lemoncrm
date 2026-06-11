@@ -40,24 +40,26 @@ function lemoncrm_check_latest_release($db, $currentVersion)
 		$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		curl_close($ch);
 
-		if ($httpCode !== 200 || empty($json)) {
-			return null;
-		}
-		$data = json_decode($json, true);
-		if (!is_array($data) || empty($data['tag_name'])) {
-			return null;
-		}
-		$latest  = ltrim($data['tag_name'], 'v');
-		$htmlUrl = $data['html_url'] ?? '';
-		if (!preg_match('#^https://github\.com/hello-lemon/module-dolibarr-lemoncrm/#', $htmlUrl)) {
-			$htmlUrl = 'https://github.com/hello-lemon/module-dolibarr-lemoncrm/releases';
+		$data = ($httpCode === 200 && !empty($json)) ? json_decode($json, true) : null;
+		if (is_array($data) && !empty($data['tag_name'])) {
+			$latest  = ltrim($data['tag_name'], 'v');
+			$htmlUrl = $data['html_url'] ?? '';
+			if (!preg_match('#^https://github\.com/hello-lemon/module-dolibarr-lemoncrm/#', $htmlUrl)) {
+				$htmlUrl = 'https://github.com/hello-lemon/module-dolibarr-lemoncrm/releases';
+			}
 		}
 
+		// Cacher aussi les échecs (version null) : GitHub down ou rate-limit ne doit
+		// pas déclencher un appel bloquant à chaque ouverture de la page admin
 		dolibarr_set_const($db, 'LEMONCRM_UPDATE_CHECK_CACHE', json_encode([
 			'ts'      => $now,
 			'version' => $latest,
 			'url'     => $htmlUrl,
 		]), 'chaine', 0, '', 0);
+
+		if ($latest === null) {
+			return null;
+		}
 	}
 
 	if (!empty($latest) && version_compare($latest, $currentVersion, '>')) {
@@ -318,6 +320,60 @@ function lemoncrm_get_type_icons()
 function lemoncrm_get_call_outcomes()
 {
 	return array('connected' => 'Joint', 'voicemail' => 'Messagerie', 'no_answer' => 'Pas de réponse', 'busy' => 'Occupé');
+}
+
+/**
+ * Render a small "saved" confirmation page for popup/drawer mode and exit.
+ * Notifies the opener via postMessage and auto-closes the window.
+ *
+ * @param string $message Message to display
+ * @return void (exits)
+ */
+function lemoncrm_render_popup_saved($message)
+{
+	print '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>';
+	print '<div style="padding:40px;text-align:center;font-family:sans-serif;">';
+	print '<div style="font-size:2em;margin-bottom:10px;">&#10003;</div>';
+	print '<div style="font-weight:600;">'.dol_escape_htmltag($message).'</div>';
+	print '</div>';
+	print '<script>if(window.opener){window.opener.postMessage("lcrm_saved","*");}setTimeout(function(){ window.close(); }, 800);</script>';
+	print '</body></html>';
+	exit;
+}
+
+/**
+ * Hydrate the interaction object from the submitted form fields.
+ * Used by both create and update flows.
+ *
+ * @param LemonCRMInteraction $object Interaction to hydrate
+ * @return void
+ */
+function lemoncrm_hydrate_interaction_from_post(LemonCRMInteraction $object)
+{
+	$object->interaction_type = GETPOST('interaction_type', 'alpha');
+	if (empty($object->interaction_type)) {
+		// Fallback: hidden backup field
+		$object->interaction_type = GETPOST('interaction_type_backup', 'alpha');
+	}
+	$object->fk_soc = GETPOSTINT('fk_soc');
+	$object->fk_socpeople = GETPOSTINT('fk_socpeople');
+	$object->direction = GETPOST('direction', 'alpha');
+	if (empty($object->direction)) {
+		$object->direction = 'OUT';
+	}
+	$object->date_interaction = dol_mktime(
+		GETPOSTINT('date_interactionhour'), GETPOSTINT('date_interactionmin'), 0,
+		GETPOSTINT('date_interactionmonth'), GETPOSTINT('date_interactionday'), GETPOSTINT('date_interactionyear')
+	);
+	$object->duration_minutes = GETPOSTINT('duration_minutes');
+	$object->summary = GETPOST('summary', 'restricthtml');
+	$object->followup_action = GETPOST('followup_action', 'restricthtml');
+	$object->followup_date = GETPOST('followup_date', 'alpha');
+	$object->followup_time = GETPOST('followup_time', 'alpha');
+	$object->followup_mode = GETPOST('followup_mode', 'alpha');
+	$object->sentiment = GETPOST('sentiment', 'alpha');
+	$object->prospect_status = GETPOST('prospect_status', 'alpha');
+	$object->fk_project = GETPOSTINT('fk_project');
 }
 
 /**

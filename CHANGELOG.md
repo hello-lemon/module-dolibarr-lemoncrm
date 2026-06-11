@@ -2,6 +2,41 @@
 
 Toutes les modifications notables du module sont listees ici.
 
+## [3.0.0] - 2026-06-11
+
+### Cassant
+- **IDs de permissions renumérotés** : 5002101/02/03 → 21000201/02/03 (alignement sur la plage officielle Lemon 210002 × 100 + index). Sur une instance existante, migrer en SQL AVANT de déployer (sinon la réactivation du module efface les droits accordés) :
+  `UPDATE llx_rights_def SET id = 21000201 WHERE id = 5002101 AND module = 'lemoncrm';` (idem 02/03) puis les mêmes UPDATE sur `llx_user_rights.fk_id` et `llx_usergroup_rights.fk_id`.
+- **`lib/lemoncrm.lib.php` déplacé vers `core/lib/lemoncrm.lib.php`** (convention Dolibarr). Supprimer l'ancien dossier `lib/` au déploiement.
+
+### Ajouté
+- **Relance = événement agenda** : chaque relance planifiée crée un événement « à faire » (type LCRM_RELANCE) dans l'agenda Dolibarr à la date/heure de relance — rappels natifs, visibilité agenda et fiche projet. Clôturé automatiquement quand la relance est marquée faite, supprimé si la relance disparaît. Nouvelle colonne `fk_actioncomm_followup`. Désactivable (`LEMONCRM_FOLLOWUP_AGENDA`).
+- **Statut prospect reporté sur la fiche tiers** : le statut prospect de l'interaction met à jour le statut de prospection natif du tiers (`fk_stcomm`). Mapping par défaut froid→à contacter, tiède/chaud/négociation→en cours, gagné→contact fait, perdu→ne pas contacter ; personnalisable via `LEMONCRM_STCOMM_MAP` (JSON). Désactivable (`LEMONCRM_SYNC_STCOMM`).
+- **API REST** (`/api/index.php/lemoncrm/interactions`) : liste (filtre socid, pagination), détail, création, relance faite, suppression. Auth DOLAPIKEY + permissions du module.
+- **Profil d'export** natif (Outils > Export) : interactions avec tiers, contact, auteur, relance, sentiment, statut.
+- **Box page d'accueil** « Relances CRM à faire » (en retard / aujourd'hui / à venir).
+- **Filtre et colonne Auteur** sur le dashboard et la liste des interactions.
+- **Seed des dictionnaires** sentiment et statut prospect à l'installation (tables créées vides auparavant).
+
+### Corrigé
+- **Fiche interaction cassée** : `require_once` vers `projet/class/html.formprojet.class.php` (inexistant en Dolibarr 22, la classe est dans `core/class/`) → fatal en plein rendu, boutons Enregistrer/Annuler absents et toggles morts.
+- **Bouton « Créer une tâche » du dashboard** : lien GET vers un endpoint qui exige POST → 405 systématique. Passé en mini-formulaire POST.
+- **Fiche en vue : résumé HTML affiché brut** (balises visibles). Rendu via `dol_htmlwithnojs` comme sur le dashboard.
+- **Filtre « en retard » de la liste** : comparait une DATE à un datetime → les relances du jour sortaient en retard.
+- **Label agenda des relances** : entités HTML décodées (`t&eacute;l&eacute;phone` → `téléphone`).
+- Update check GitHub : les échecs sont aussi mis en cache 24 h (fini l'appel bloquant 5 s à chaque ouverture de la page admin quand GitHub est indisponible).
+- Référence dupliquée possible en création simultanée : régénération + retry sur collision d'index unique.
+- Suppression d'un parent de thread : les enfants sont re-parentés (l'aîné devient parent) au lieu de garder un `fk_parent` orphelin.
+- `Module210002Name` : clé de traduction alignée sur le numéro de module (restée sur 500210 depuis la migration d'ID).
+
+### Sécurité
+- `action=followup_done` : passage en POST + token CSRF (état modifiable via simple GET auparavant).
+- Suppression de masse du dashboard : vérification explicite du token CSRF.
+- Scoping entité (`entity`) sur `fetch()`, `ajax/contact_info.php` et le rattachement de thread.
+- `ajax/dictionary.php` action=list : vérification de la permission de lecture.
+- Message d'erreur de formulaire échappé (`dol_escape_htmltag`).
+- IDs `c_actioncomm` choisis dynamiquement à l'installation (un INSERT IGNORE à id fixe entrait silencieusement en collision avec un autre module).
+
 ## [2.1.0] - 2026-06-10
 
 ### Ajoute

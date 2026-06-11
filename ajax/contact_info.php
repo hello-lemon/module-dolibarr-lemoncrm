@@ -22,7 +22,8 @@ if ($contactId <= 0 || !$user->hasRight('societe', 'contact', 'lire')) {
 	exit;
 }
 
-$sql = "SELECT phone_mobile, phone_perso, phone, email FROM ".MAIN_DB_PREFIX."socpeople WHERE rowid = ".(int)$contactId;
+$sql = "SELECT phone_mobile, phone_perso, phone, email FROM ".MAIN_DB_PREFIX."socpeople";
+$sql .= " WHERE rowid = ".(int)$contactId." AND entity IN (".getEntity('socpeople').")";
 $resql = $db->query($sql);
 if ($resql && ($obj = $db->fetch_object($resql))) {
 	echo json_encode([

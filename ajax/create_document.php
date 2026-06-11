@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
 dol_include_once('/lemoncrm/class/lemoncrm_interaction.class.php');
-dol_include_once('/lemoncrm/lib/lemoncrm.lib.php');
+dol_include_once('/lemoncrm/core/lib/lemoncrm.lib.php');
 
 // CSRF check
 if (GETPOST('token', 'alpha') != newToken()) {

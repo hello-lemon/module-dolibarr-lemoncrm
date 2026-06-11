@@ -105,7 +105,7 @@ class ActionsLemonCRM
 			return 0;
 		}
 
-		dol_include_once('/lemoncrm/lib/lemoncrm.lib.php');
+		dol_include_once('/lemoncrm/core/lib/lemoncrm.lib.php');
 		$langs->load('lemoncrm@lemoncrm');
 
 		$socid = $this->detectSocidFromPage();

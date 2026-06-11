@@ -17,7 +17,7 @@ if (!$res) {
 }
 
 require_once DOL_DOCUMENT_ROOT.'/core/lib/admin.lib.php';
-dol_include_once('/lemoncrm/lib/lemoncrm.lib.php');
+dol_include_once('/lemoncrm/core/lib/lemoncrm.lib.php');
 
 if (!$user->admin) {
 	accessforbidden();
@@ -34,6 +34,9 @@ if (GETPOST('action', 'alpha') == 'save' && $_SERVER['REQUEST_METHOD'] === 'POST
 	}
 	$persist = GETPOSTINT('LEMONCRM_QUICKLOG_PERSIST');
 	dolibarr_set_const($db, 'LEMONCRM_QUICKLOG_PERSIST', $persist, 'chaine', 0, '', $conf->entity);
+
+	dolibarr_set_const($db, 'LEMONCRM_FOLLOWUP_AGENDA', GETPOSTINT('LEMONCRM_FOLLOWUP_AGENDA'), 'chaine', 0, '', $conf->entity);
+	dolibarr_set_const($db, 'LEMONCRM_SYNC_STCOMM', GETPOSTINT('LEMONCRM_SYNC_STCOMM'), 'chaine', 0, '', $conf->entity);
 
 	$menuLabel = GETPOST('LEMONCRM_MENU_LABEL', 'alpha');
 	if (!empty($menuLabel)) {
@@ -195,6 +198,30 @@ if ($mode == 'about') {
 		print '</td>';
 		print '</tr>';
 	}
+
+	print '<tr class="liste_titre"><td colspan="2">Relances et prospection</td></tr>';
+
+	// Followup as agenda event
+	$followupAgendaValue = getDolGlobalInt('LEMONCRM_FOLLOWUP_AGENDA', 1);
+	print '<tr class="oddeven">';
+	print '<td>Créer un événement agenda pour chaque relance planifiée<br>';
+	print '<span class="opacitymedium">La relance apparaît dans l\'agenda Dolibarr comme événement « à faire » et profite des rappels natifs. Clôturé automatiquement quand la relance est marquée faite.</span></td>';
+	print '<td><select name="LEMONCRM_FOLLOWUP_AGENDA" class="flat">';
+	print '<option value="1"'.($followupAgendaValue ? ' selected' : '').'>Oui</option>';
+	print '<option value="0"'.(!$followupAgendaValue ? ' selected' : '').'>Non</option>';
+	print '</select></td>';
+	print '</tr>';
+
+	// Sync prospect status to thirdparty
+	$syncStcommValue = getDolGlobalInt('LEMONCRM_SYNC_STCOMM', 1);
+	print '<tr class="oddeven">';
+	print '<td>Reporter le statut prospect sur la fiche tiers<br>';
+	print '<span class="opacitymedium">Met à jour le statut de prospection natif du tiers (froid → à contacter, tiède/chaud/négociation → en cours, gagné → contact fait, perdu → ne pas contacter). Personnalisable via la constante LEMONCRM_STCOMM_MAP (JSON).</span></td>';
+	print '<td><select name="LEMONCRM_SYNC_STCOMM" class="flat">';
+	print '<option value="1"'.($syncStcommValue ? ' selected' : '').'>Oui</option>';
+	print '<option value="0"'.(!$syncStcommValue ? ' selected' : '').'>Non</option>';
+	print '</select></td>';
+	print '</tr>';
 
 	print '<tr class="liste_titre"><td colspan="2">Quicklog</td></tr>';
 

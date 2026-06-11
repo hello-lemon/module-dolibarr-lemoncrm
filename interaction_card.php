@@ -22,7 +22,7 @@ require_once DOL_DOCUMENT_ROOT.'/core/class/html.formcompany.class.php';
 require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
 require_once DOL_DOCUMENT_ROOT.'/contact/class/contact.class.php';
 dol_include_once('/lemoncrm/class/lemoncrm_interaction.class.php');
-dol_include_once('/lemoncrm/lib/lemoncrm.lib.php');
+dol_include_once('/lemoncrm/core/lib/lemoncrm.lib.php');
 
 $langs->loadLangs(array("lemoncrm@lemoncrm", "companies", "commercial"));
 
@@ -50,54 +50,6 @@ if ($id > 0) {
 }
 
 $form = new Form($db);
-
-/**
- * Render a small "saved" confirmation page for popup/drawer mode and exit.
- * Notifies the opener via postMessage and auto-closes the window.
- */
-function lemoncrm_render_popup_saved(string $message): void
-{
-	print '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>';
-	print '<div style="padding:40px;text-align:center;font-family:sans-serif;">';
-	print '<div style="font-size:2em;margin-bottom:10px;">&#10003;</div>';
-	print '<div style="font-weight:600;">'.dol_escape_htmltag($message).'</div>';
-	print '</div>';
-	print '<script>if(window.opener){window.opener.postMessage("lcrm_saved","*");}setTimeout(function(){ window.close(); }, 800);</script>';
-	print '</body></html>';
-	exit;
-}
-
-/**
- * Hydrate the interaction object from the submitted form fields.
- * Used by both create and update flows.
- */
-function lemoncrm_hydrate_interaction_from_post(LemonCRMInteraction $object): void
-{
-	$object->interaction_type = GETPOST('interaction_type', 'alpha');
-	if (empty($object->interaction_type)) {
-		// Fallback: hidden backup field
-		$object->interaction_type = GETPOST('interaction_type_backup', 'alpha');
-	}
-	$object->fk_soc = GETPOSTINT('fk_soc');
-	$object->fk_socpeople = GETPOSTINT('fk_socpeople');
-	$object->direction = GETPOST('direction', 'alpha');
-	if (empty($object->direction)) {
-		$object->direction = 'OUT';
-	}
-	$object->date_interaction = dol_mktime(
-		GETPOSTINT('date_interactionhour'), GETPOSTINT('date_interactionmin'), 0,
-		GETPOSTINT('date_interactionmonth'), GETPOSTINT('date_interactionday'), GETPOSTINT('date_interactionyear')
-	);
-	$object->duration_minutes = GETPOSTINT('duration_minutes');
-	$object->summary = GETPOST('summary', 'restricthtml');
-	$object->followup_action = GETPOST('followup_action', 'restricthtml');
-	$object->followup_date = GETPOST('followup_date', 'alpha');
-	$object->followup_time = GETPOST('followup_time', 'alpha');
-	$object->followup_mode = GETPOST('followup_mode', 'alpha');
-	$object->sentiment = GETPOST('sentiment', 'alpha');
-	$object->prospect_status = GETPOST('prospect_status', 'alpha');
-	$object->fk_project = GETPOSTINT('fk_project');
-}
 
 /*
  * Actions
@@ -199,6 +151,12 @@ if ($action == 'confirm_delete' && $confirm == 'yes' && $user->hasRight('lemoncr
 
 // Mark followup done
 if ($action == 'followup_done' && $user->hasRight('lemoncrm', 'interaction', 'write')) {
+	if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+		accessforbidden('Method not allowed');
+	}
+	if (GETPOST('token', 'alpha') != newToken()) {
+		accessforbidden('Bad value for CSRF token');
+	}
 	$result = $object->markFollowupDone($user);
 	if ($result > 0) {
 		setEventMessages($langs->trans('FollowupDone'), null, 'mesgs');
@@ -325,7 +283,7 @@ if ($action == 'create' || ($action == 'edit' && $id > 0)) {
 	print '<div class="lemoncrm-form">';
 
 	if (!empty($formError)) {
-		print '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;margin-bottom:12px;color:#991b1b;font-size:0.9em">'.$formError.'</div>';
+		print '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;margin-bottom:12px;color:#991b1b;font-size:0.9em">'.dol_escape_htmltag($formError).'</div>';
 	}
 
 	print '<form method="POST" action="'.dol_escape_htmltag($_SERVER["PHP_SELF"]).'" id="lemoncrm-main-form" novalidate>';
@@ -882,10 +840,14 @@ elseif ($id > 0) {
 	}
 	print '</div>';
 
-	// Summary
+	// Summary : HTML riche du DolEditor rendu proprement, texte brut en nl2br
 	if (!empty($object->summary)) {
 		print '<div class="lcrm-view-summary">';
-		print dol_nl2br(dol_escape_htmltag($object->summary));
+		if (strip_tags($object->summary) == $object->summary) {
+			print dol_nl2br(dol_escape_htmltag($object->summary));
+		} else {
+			print dol_htmlwithnojs($object->summary);
+		}
 		print '</div>';
 	}
 
@@ -945,7 +907,12 @@ elseif ($id > 0) {
 	if ($user->hasRight('lemoncrm', 'interaction', 'write')) {
 		print '<a class="butAction" href="'.$_SERVER["PHP_SELF"].'?id='.$object->id.'&action=edit">'.$langs->trans('Modify').'</a>';
 		if (!$object->followup_done && !empty($object->followup_date)) {
-			print '<a class="butAction" href="'.$_SERVER["PHP_SELF"].'?id='.$object->id.'&action=followup_done">'.$langs->trans('MarkFollowupDone').'</a>';
+			print '<form method="POST" action="'.$_SERVER["PHP_SELF"].'" style="display:inline">';
+			print '<input type="hidden" name="token" value="'.newToken().'">';
+			print '<input type="hidden" name="action" value="followup_done">';
+			print '<input type="hidden" name="id" value="'.$object->id.'">';
+			print '<button type="submit" class="butAction" style="border:0;cursor:pointer">'.$langs->trans('MarkFollowupDone').'</button>';
+			print '</form>';
 		}
 	}
 	if ($user->hasRight('lemoncrm', 'interaction', 'delete')) {

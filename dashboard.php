@@ -18,14 +18,17 @@ if (!$res) {
 
 require_once DOL_DOCUMENT_ROOT.'/core/lib/date.lib.php';
 require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
+require_once DOL_DOCUMENT_ROOT.'/core/class/html.form.class.php';
 dol_include_once('/lemoncrm/class/lemoncrm_interaction.class.php');
-dol_include_once('/lemoncrm/lib/lemoncrm.lib.php');
+dol_include_once('/lemoncrm/core/lib/lemoncrm.lib.php');
 
 $langs->loadLangs(array("lemoncrm@lemoncrm", "companies", "bills"));
 
 if (!$user->hasRight('lemoncrm', 'interaction', 'read')) {
 	accessforbidden();
 }
+
+$form = new Form($db);
 
 $socid = GETPOSTINT('socid');
 $contactid = GETPOSTINT('contactid');
@@ -97,6 +100,12 @@ if ($action_page == 'delete' && $user->hasRight('lemoncrm', 'interaction', 'dele
 // Mass delete action (Dolibarr standard: confirmmassaction + massaction=predelete)
 $massaction = GETPOST('massaction', 'alpha');
 if (GETPOST('confirmmassaction', 'alpha') && $massaction == 'predelete' && $user->hasRight('lemoncrm', 'interaction', 'delete')) {
+	if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+		accessforbidden('Method not allowed');
+	}
+	if (GETPOST('token', 'alpha') != newToken()) {
+		accessforbidden('Bad value for CSRF token');
+	}
 	$toselect = GETPOST('toselect', 'array');
 	if (is_array($toselect) && count($toselect) > 0) {
 		foreach ($toselect as $delId) {
@@ -243,11 +252,17 @@ if ($resql) {
 		if (!empty($obj->followup_mode)) print ' <small>('.($followup_modes[$obj->followup_mode] ?? '').')</small>';
 		print '</td>';
 		print '<td style="font-size:0.88em;color:#6b7280">'.dol_trunc(dol_escape_htmltag($obj->followup_action), 40).'</td>';
-		// Create task button
+		// Create task button (POST : create_document.php rejette le GET)
 		print '<td style="width:20px">';
 		if ($obj->fk_soc > 0) {
-			$taskUrl = dol_buildpath('/lemoncrm/ajax/create_document.php', 1).'?type=projet&interaction_id='.$obj->rowid.'&token='.newToken();
-			print '<a href="'.$taskUrl.'" title="Créer une tâche"><span class="fas fa-tasks" style="color:#6b7280"></span></a>';
+			print '<form method="POST" action="'.dol_buildpath('/lemoncrm/ajax/create_document.php', 1).'" style="display:inline">';
+			print '<input type="hidden" name="token" value="'.newToken().'">';
+			print '<input type="hidden" name="type" value="projet">';
+			print '<input type="hidden" name="interaction_id" value="'.$obj->rowid.'">';
+			print '<button type="submit" title="Créer une tâche" style="border:0;background:transparent;padding:0;cursor:pointer">';
+			print '<span class="fas fa-tasks" style="color:#6b7280"></span>';
+			print '</button>';
+			print '</form>';
 		}
 		print '</td>';
 		// Done button
@@ -328,6 +343,7 @@ $search_date_start = GETPOST('search_date_start', 'alpha');
 $search_date_end = GETPOST('search_date_end', 'alpha');
 $search_summary = GETPOST('search_summary', 'alpha');
 $search_direction = GETPOST('search_direction', 'alpha');
+$search_author = GETPOSTINT('search_author');
 $sortfield = GETPOST('sortfield', 'alpha') ?: 'i.date_interaction';
 $sortorder = GETPOST('sortorder', 'alpha') ?: 'DESC';
 $limit = 30;
@@ -336,6 +352,7 @@ $limit = 30;
 if (GETPOST('button_removefilter', 'alpha') || GETPOST('button_removefilter_x', 'alpha') || GETPOST('button_removefilter.x', 'alpha')) {
 	$search_type = ''; $search_followup = ''; $search_thirdparty = '';
 	$search_date_start = ''; $search_date_end = ''; $search_summary = ''; $search_direction = '';
+	$search_author = 0;
 }
 
 $sql = "SELECT i.rowid, i.ref, i.interaction_type, i.fk_soc, i.fk_socpeople, i.fk_actioncomm, i.fk_user_author,";
@@ -355,6 +372,7 @@ if (!empty($search_type)) $sql .= " AND i.interaction_type = '".$db->escape($sea
 if (!empty($search_thirdparty)) $sql .= " AND s.nom LIKE '%".$db->escape($search_thirdparty)."%'";
 if (!empty($search_summary)) $sql .= " AND i.summary LIKE '%".$db->escape($search_summary)."%'";
 if (!empty($search_direction)) $sql .= " AND i.direction = '".$db->escape($search_direction)."'";
+if ($search_author > 0) $sql .= " AND i.fk_user_author = ".((int) $search_author);
 if (!empty($search_date_start)) $sql .= " AND i.date_interaction >= '".$db->escape($search_date_start)." 00:00:00'";
 if (!empty($search_date_end)) $sql .= " AND i.date_interaction <= '".$db->escape($search_date_end)." 23:59:59'";
 if ($search_followup == 'pending') $sql .= " AND i.followup_done = 0 AND i.followup_date IS NOT NULL";
@@ -429,6 +447,7 @@ if ($search_date_end) $param .= '&search_date_end='.$search_date_end;
 if ($search_summary) $param .= '&search_summary='.urlencode($search_summary);
 if ($search_direction) $param .= '&search_direction='.$search_direction;
 if ($search_followup) $param .= '&search_followup='.$search_followup;
+if ($search_author > 0) $param .= '&search_author='.$search_author;
 
 $colcount = $socid ? 8 : 9;
 
@@ -509,7 +528,22 @@ print ' <input type="image" class="liste_titre" name="button_search" src="'.img_
 print ' <input type="image" class="liste_titre" name="button_removefilter" src="'.img_picto($langs->trans("RemoveFilter"), 'searchclear.png', '', 0, 1).'" title="'.$langs->trans("RemoveFilter").'">';
 print '</td>';
 
-print '<td class="liste_titre"></td>';
+// Author filter
+print '<td class="liste_titre">';
+print '<select name="search_author" class="flat maxwidth100">';
+print '<option value="0">Auteur...</option>';
+$sqlu = "SELECT DISTINCT u.rowid, CONCAT(u.firstname, ' ', u.lastname) as name";
+$sqlu .= " FROM ".MAIN_DB_PREFIX."lemoncrm_interaction as i";
+$sqlu .= " INNER JOIN ".MAIN_DB_PREFIX."user as u ON i.fk_user_author = u.rowid";
+$sqlu .= " WHERE i.entity = ".((int) $conf->entity)." ORDER BY name";
+$resqlu = $db->query($sqlu);
+if ($resqlu) {
+	while ($ou = $db->fetch_object($resqlu)) {
+		print '<option value="'.$ou->rowid.'"'.($search_author == $ou->rowid ? ' selected' : '').'>'.dol_escape_htmltag(trim($ou->name)).'</option>';
+	}
+}
+print '</select>';
+print '</td>';
 
 print '</tr>';
 

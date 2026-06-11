@@ -35,6 +35,11 @@ $tableName = MAIN_DB_PREFIX.'c_lemoncrm_'.$type;
  * GET action=list : return active dictionary entries
  */
 if ($action == 'list') {
+	if (!$user->hasRight('lemoncrm', 'interaction', 'read')) {
+		http_response_code(403);
+		echo json_encode(array('error' => 'Permission denied'));
+		exit;
+	}
 	$sql = "SELECT rowid, code, label, color";
 	$sql .= " FROM ".$tableName;
 	$sql .= " WHERE active = 1";

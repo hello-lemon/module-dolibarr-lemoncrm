@@ -187,7 +187,9 @@ $(function() {
 			delay: 200,
 			appendTo: "#lcrm-quicklog-panel",
 			source: function(request, response) {
-				$.get(lcrm_dol_root + "/custom/lemoncrm/ajax/search_company.php", {term: request.term}, function(data) {
+				// URL dérivée de lcrm_base : fonctionne quel que soit le dossier d'installation du module
+				var searchUrl = baseUrl.replace(/interaction_card\.php.*$/, "ajax/search_company.php");
+				$.get(searchUrl, {term: request.term}, function(data) {
 					var out = [];
 					if (data && data.length) {
 						for (var i = 0; i < data.length; i++) {

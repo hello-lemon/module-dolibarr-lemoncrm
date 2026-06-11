@@ -9,6 +9,7 @@ CREATE TABLE llx_lemoncrm_interaction (
     rowid             INTEGER AUTO_INCREMENT PRIMARY KEY,
     ref               VARCHAR(128) NOT NULL,
     fk_actioncomm     INTEGER NOT NULL,
+    fk_actioncomm_followup INTEGER DEFAULT NULL,
     interaction_type  VARCHAR(32) NOT NULL,
     fk_soc            INTEGER,
     fk_socpeople      INTEGER,

@@ -20,6 +20,7 @@ class LemonCRMInteraction extends CommonObject
 
 	public $ref;
 	public $fk_actioncomm;
+	public $fk_actioncomm_followup;
 	public $interaction_type;
 	public $fk_soc;
 	public $fk_socpeople;
@@ -90,9 +91,7 @@ class LemonCRMInteraction extends CommonObject
 
 		$error = 0;
 
-		// Generate ref
-		dol_include_once('/lemoncrm/lib/lemoncrm.lib.php');
-		$this->ref = lemoncrm_get_next_ref($this->db);
+		dol_include_once('/lemoncrm/core/lib/lemoncrm.lib.php');
 		$this->fk_user_author = $user->id;
 		$this->datec = dol_now();
 		$this->entity = $conf->entity;
@@ -106,45 +105,61 @@ class LemonCRMInteraction extends CommonObject
 		}
 
 		if (!$error) {
-			// 2. Create lemoncrm_interaction record
-			$sql = "INSERT INTO ".MAIN_DB_PREFIX."lemoncrm_interaction (";
-			$sql .= "ref, fk_actioncomm, interaction_type, fk_soc, fk_socpeople,";
-			$sql .= " fk_user_author, summary, followup_action, followup_date, followup_time, followup_done,";
-			$sql .= " followup_mode, date_interaction, duration_minutes, direction,";
-			$sql .= " sentiment, prospect_status, fk_parent, fk_project, status, datec, entity";
-			$sql .= ") VALUES (";
-			$sql .= "'".$this->db->escape($this->ref)."',";
-			$sql .= " ".((int) $this->fk_actioncomm).",";
-			$sql .= " '".$this->db->escape($this->interaction_type)."',";
-			$sql .= " ".$this->sqlNullableFk($this->fk_soc).",";
-			$sql .= " ".$this->sqlNullableFk($this->fk_socpeople).",";
-			$sql .= " ".((int) $this->fk_user_author).",";
-			$sql .= " ".$this->sqlNullableString($this->summary).",";
-			$sql .= " ".$this->sqlNullableString($this->followup_action).",";
-			$sql .= " ".$this->sqlNullableString($this->followup_date).",";
-			$sql .= " ".$this->sqlNullableString($this->followup_time).",";
-			$sql .= " ".((int) $this->followup_done).",";
-			$sql .= " ".$this->sqlNullableString($this->followup_mode).",";
-			$sql .= " '".$this->db->idate($this->date_interaction)."',";
-			$sql .= " ".((int) $this->duration_minutes).",";
-			$sql .= " '".$this->db->escape($this->direction)."',";
-			$sql .= " ".$this->sqlNullableString($this->sentiment).",";
-			$sql .= " ".$this->sqlNullableString($this->prospect_status).",";
-			$sql .= " ".$this->sqlNullableFk($this->fk_parent).",";
-			$sql .= " ".$this->sqlNullableFk($this->fk_project).",";
-			$sql .= " ".((int) $this->status).",";
-			$sql .= " '".$this->db->idate($this->datec)."',";
-			$sql .= " ".((int) $this->entity);
-			$sql .= ")";
+			// 2. Create lemoncrm_interaction record.
+			// La ref MAX()+1 peut entrer en collision entre deux créations simultanées
+			// (index UNIQUE ref+entity) : on régénère et on retente.
+			$maxAttempts = 3;
+			for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+				$this->ref = lemoncrm_get_next_ref($this->db);
 
-			$resql = $this->db->query($sql);
-			if (!$resql) {
-				$error++;
-				$this->error = $this->db->lasterror();
-				$this->errors[] = $this->error;
-			} else {
-				$this->id = $this->db->last_insert_id(MAIN_DB_PREFIX."lemoncrm_interaction");
+				$sql = "INSERT INTO ".MAIN_DB_PREFIX."lemoncrm_interaction (";
+				$sql .= "ref, fk_actioncomm, interaction_type, fk_soc, fk_socpeople,";
+				$sql .= " fk_user_author, summary, followup_action, followup_date, followup_time, followup_done,";
+				$sql .= " followup_mode, date_interaction, duration_minutes, direction,";
+				$sql .= " sentiment, prospect_status, fk_parent, fk_project, status, datec, entity";
+				$sql .= ") VALUES (";
+				$sql .= "'".$this->db->escape($this->ref)."',";
+				$sql .= " ".((int) $this->fk_actioncomm).",";
+				$sql .= " '".$this->db->escape($this->interaction_type)."',";
+				$sql .= " ".$this->sqlNullableFk($this->fk_soc).",";
+				$sql .= " ".$this->sqlNullableFk($this->fk_socpeople).",";
+				$sql .= " ".((int) $this->fk_user_author).",";
+				$sql .= " ".$this->sqlNullableString($this->summary).",";
+				$sql .= " ".$this->sqlNullableString($this->followup_action).",";
+				$sql .= " ".$this->sqlNullableString($this->followup_date).",";
+				$sql .= " ".$this->sqlNullableString($this->followup_time).",";
+				$sql .= " ".((int) $this->followup_done).",";
+				$sql .= " ".$this->sqlNullableString($this->followup_mode).",";
+				$sql .= " '".$this->db->idate($this->date_interaction)."',";
+				$sql .= " ".((int) $this->duration_minutes).",";
+				$sql .= " '".$this->db->escape($this->direction)."',";
+				$sql .= " ".$this->sqlNullableString($this->sentiment).",";
+				$sql .= " ".$this->sqlNullableString($this->prospect_status).",";
+				$sql .= " ".$this->sqlNullableFk($this->fk_parent).",";
+				$sql .= " ".$this->sqlNullableFk($this->fk_project).",";
+				$sql .= " ".((int) $this->status).",";
+				$sql .= " '".$this->db->idate($this->datec)."',";
+				$sql .= " ".((int) $this->entity);
+				$sql .= ")";
+
+				$resql = $this->db->query($sql);
+				if ($resql) {
+					$this->id = $this->db->last_insert_id(MAIN_DB_PREFIX."lemoncrm_interaction");
+					break;
+				}
+				if ($this->db->lasterrno() != 'DB_ERROR_RECORD_ALREADY_EXISTS' || $attempt == $maxAttempts) {
+					$error++;
+					$this->error = $this->db->lasterror();
+					$this->errors[] = $this->error;
+					break;
+				}
 			}
+		}
+
+		// 3. Followup as future agenda event + prospect status on thirdparty
+		if (!$error) {
+			$this->syncFollowupActionComm($user);
+			$this->syncProspectStatusToThirdparty();
 		}
 
 		if (!$error) {
@@ -259,6 +274,12 @@ class LemonCRMInteraction extends CommonObject
 			$this->updateActionComm($user);
 		}
 
+		// Followup agenda event + prospect status on thirdparty
+		if (!$error) {
+			$this->syncFollowupActionComm($user);
+			$this->syncProspectStatusToThirdparty();
+		}
+
 		if (!$error) {
 			$this->db->commit();
 			return 1;
@@ -303,7 +324,9 @@ class LemonCRMInteraction extends CommonObject
 	 */
 	public function fetch($id, $ref = '')
 	{
-		$sql = "SELECT i.rowid, i.ref, i.fk_actioncomm, i.interaction_type,";
+		global $conf;
+
+		$sql = "SELECT i.rowid, i.ref, i.fk_actioncomm, i.fk_actioncomm_followup, i.interaction_type,";
 		$sql .= " i.fk_soc, i.fk_socpeople, i.fk_user_author,";
 		$sql .= " i.summary, i.followup_action, i.followup_date, i.followup_time, i.followup_done,";
 		$sql .= " i.followup_mode, i.date_interaction, i.duration_minutes,";
@@ -314,7 +337,7 @@ class LemonCRMInteraction extends CommonObject
 		$sql .= " FROM ".MAIN_DB_PREFIX."lemoncrm_interaction as i";
 		$sql .= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON i.fk_soc = s.rowid";
 		$sql .= " LEFT JOIN ".MAIN_DB_PREFIX."socpeople as sp ON i.fk_socpeople = sp.rowid";
-		$sql .= " WHERE";
+		$sql .= " WHERE i.entity = ".((int) $conf->entity)." AND";
 
 		if ($id > 0) {
 			$sql .= " i.rowid = ".((int)$id);
@@ -332,6 +355,7 @@ class LemonCRMInteraction extends CommonObject
 				$this->id = $obj->rowid;
 				$this->ref = $obj->ref;
 				$this->fk_actioncomm = $obj->fk_actioncomm;
+				$this->fk_actioncomm_followup = $obj->fk_actioncomm_followup;
 				$this->interaction_type = $obj->interaction_type;
 				$this->fk_soc = $obj->fk_soc;
 				$this->fk_socpeople = $obj->fk_socpeople;
@@ -387,6 +411,32 @@ class LemonCRMInteraction extends CommonObject
 			}
 		}
 
+		// Delete the followup agenda event too
+		if ($this->fk_actioncomm_followup > 0) {
+			require_once DOL_DOCUMENT_ROOT.'/comm/action/class/actioncomm.class.php';
+			$followupAC = new ActionComm($this->db);
+			if ($followupAC->fetch($this->fk_actioncomm_followup) > 0) {
+				$followupAC->delete($user);
+			}
+		}
+
+		// Re-parent thread children: promote the oldest child as new parent,
+		// otherwise they would keep a dangling fk_parent
+		$sql = "SELECT rowid FROM ".MAIN_DB_PREFIX."lemoncrm_interaction";
+		$sql .= " WHERE fk_parent = ".((int) $this->id)." ORDER BY rowid ASC";
+		$resql = $this->db->query($sql);
+		if ($resql && $this->db->num_rows($resql) > 0) {
+			$children = array();
+			while ($obj = $this->db->fetch_object($resql)) {
+				$children[] = (int) $obj->rowid;
+			}
+			$newParent = array_shift($children);
+			$this->db->query("UPDATE ".MAIN_DB_PREFIX."lemoncrm_interaction SET fk_parent = NULL WHERE rowid = ".((int) $newParent));
+			if (!empty($children)) {
+				$this->db->query("UPDATE ".MAIN_DB_PREFIX."lemoncrm_interaction SET fk_parent = ".((int) $newParent)." WHERE rowid IN (".implode(',', $children).")");
+			}
+		}
+
 		$sql = "DELETE FROM ".MAIN_DB_PREFIX."lemoncrm_interaction WHERE rowid = ".((int)$this->id);
 		$resql = $this->db->query($sql);
 		if (!$resql) {
@@ -417,10 +467,160 @@ class LemonCRMInteraction extends CommonObject
 		$resql = $this->db->query($sql);
 		if ($resql) {
 			$this->followup_done = 1;
+
+			// Close the linked agenda event
+			if ($this->fk_actioncomm_followup > 0) {
+				require_once DOL_DOCUMENT_ROOT.'/comm/action/class/actioncomm.class.php';
+				$followupAC = new ActionComm($this->db);
+				if ($followupAC->fetch($this->fk_actioncomm_followup) > 0) {
+					$followupAC->percentage = 100;
+					$followupAC->update($user);
+				}
+			}
 			return 1;
 		}
 		$this->error = $this->db->lasterror();
 		return -1;
+	}
+
+	/**
+	 * Timestamp of the planned followup (date + time, fallback 09:00)
+	 *
+	 * @return int|false
+	 */
+	private function getFollowupTimestamp()
+	{
+		if (empty($this->followup_date)) {
+			return false;
+		}
+		if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $this->followup_date, $d)) {
+			return false;
+		}
+		$h = 9;
+		$m = 0;
+		if (!empty($this->followup_time) && preg_match('/^(\d{1,2}):(\d{2})/', $this->followup_time, $t)) {
+			$h = (int) $t[1];
+			$m = (int) $t[2];
+		}
+		return dol_mktime($h, $m, 0, (int) $d[2], (int) $d[3], (int) $d[1]);
+	}
+
+	/**
+	 * Keep a future agenda event (todo) in sync with the followup fields.
+	 * Created/updated when a followup is planned, removed when it disappears.
+	 * Gated by LEMONCRM_FOLLOWUP_AGENDA (default on).
+	 *
+	 * @param User $user User
+	 * @return int
+	 */
+	private function syncFollowupActionComm($user)
+	{
+		global $langs;
+
+		if (!getDolGlobalInt('LEMONCRM_FOLLOWUP_AGENDA', 1)) {
+			return 0;
+		}
+
+		require_once DOL_DOCUMENT_ROOT.'/comm/action/class/actioncomm.class.php';
+		dol_include_once('/lemoncrm/core/lib/lemoncrm.lib.php');
+
+		$ts = $this->getFollowupTimestamp();
+		$wantEvent = ($ts !== false && empty($this->followup_done));
+
+		// Label : « Relance : action » (le tiers est porté par socid)
+		$langs->load('lemoncrm@lemoncrm');
+		$label = 'Relance';
+		if (!empty($this->followup_mode)) {
+			$modes = lemoncrm_get_followup_modes();
+			// trans() encode les accents en entités HTML : décoder pour un label agenda en texte brut
+			$modeLabel = html_entity_decode($modes[$this->followup_mode] ?? $this->followup_mode, ENT_QUOTES, 'UTF-8');
+			$label .= ' '.lcfirst($modeLabel);
+		}
+		if (!empty($this->followup_action)) {
+			$label .= ' : '.dol_trunc(str_replace(array("\r\n", "\n", "\r"), ' ', strip_tags($this->followup_action)), 80);
+		}
+
+		if ($wantEvent) {
+			if ($this->fk_actioncomm_followup > 0) {
+				// Update existing event
+				$ac = new ActionComm($this->db);
+				if ($ac->fetch($this->fk_actioncomm_followup) > 0) {
+					$ac->label = $label;
+					$ac->datep = $ts;
+					$ac->datef = $ts;
+					$ac->socid = $this->fk_soc;
+					$ac->contact_id = $this->fk_socpeople > 0 ? $this->fk_socpeople : 0;
+					$ac->fk_project = ($this->fk_project > 0) ? $this->fk_project : 0;
+					return $ac->update($user);
+				}
+				// Event deleted manually from agenda: recreate below
+				$this->fk_actioncomm_followup = 0;
+			}
+
+			$ac = new ActionComm($this->db);
+			$ac->type_code = 'LCRM_RELANCE';
+			$ac->label = $label;
+			$ac->datep = $ts;
+			$ac->datef = $ts;
+			$ac->fk_user_author = $user->id;
+			$ac->fk_user_action = $this->fk_user_author > 0 ? $this->fk_user_author : $user->id;
+			$ac->userownerid = $this->fk_user_author > 0 ? $this->fk_user_author : $user->id;
+			$ac->socid = $this->fk_soc;
+			$ac->contact_id = $this->fk_socpeople > 0 ? $this->fk_socpeople : 0;
+			$ac->note_private = $this->followup_action;
+			$ac->percentage = 0; // à faire
+			if ($this->fk_project > 0) {
+				$ac->fk_project = $this->fk_project;
+			}
+			$result = $ac->create($user);
+			if ($result > 0) {
+				$this->fk_actioncomm_followup = $result;
+				$this->db->query("UPDATE ".MAIN_DB_PREFIX."lemoncrm_interaction SET fk_actioncomm_followup = ".((int) $result)." WHERE rowid = ".((int) $this->id));
+			}
+			return $result;
+		}
+
+		// No followup planned (anymore): remove the orphan event
+		if ($this->fk_actioncomm_followup > 0) {
+			$ac = new ActionComm($this->db);
+			if ($ac->fetch($this->fk_actioncomm_followup) > 0 && $ac->percentage < 100) {
+				$ac->delete($user);
+			}
+			$this->fk_actioncomm_followup = 0;
+			$this->db->query("UPDATE ".MAIN_DB_PREFIX."lemoncrm_interaction SET fk_actioncomm_followup = NULL WHERE rowid = ".((int) $this->id));
+		}
+		return 0;
+	}
+
+	/**
+	 * Report the prospect status of the interaction on the thirdparty
+	 * (native prospection status llx_societe.fk_stcomm).
+	 * Mapping overridable via LEMONCRM_STCOMM_MAP (JSON code => stcomm id).
+	 * Gated by LEMONCRM_SYNC_STCOMM (default on).
+	 *
+	 * @return void
+	 */
+	private function syncProspectStatusToThirdparty()
+	{
+		if (!getDolGlobalInt('LEMONCRM_SYNC_STCOMM', 1)) {
+			return;
+		}
+		if (empty($this->prospect_status) || $this->fk_soc <= 0) {
+			return;
+		}
+
+		// c_stcomm natif : -1 ne pas contacter, 0 jamais contacté, 1 à contacter, 2 en cours, 3 fait
+		$map = json_decode(getDolGlobalString('LEMONCRM_STCOMM_MAP', ''), true);
+		if (!is_array($map) || empty($map)) {
+			$map = array('cold' => 1, 'warm' => 2, 'hot' => 2, 'negotiation' => 2, 'won' => 3, 'lost' => -1);
+		}
+		if (!isset($map[$this->prospect_status])) {
+			return; // code custom sans correspondance : on ne touche pas au tiers
+		}
+
+		$sql = "UPDATE ".MAIN_DB_PREFIX."societe SET fk_stcomm = ".((int) $map[$this->prospect_status]);
+		$sql .= " WHERE rowid = ".((int) $this->fk_soc);
+		$this->db->query($sql);
 	}
 
 	/**

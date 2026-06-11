@@ -20,7 +20,7 @@ require_once DOL_DOCUMENT_ROOT.'/core/lib/date.lib.php';
 require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
 require_once DOL_DOCUMENT_ROOT.'/contact/class/contact.class.php';
 dol_include_once('/lemoncrm/class/lemoncrm_interaction.class.php');
-dol_include_once('/lemoncrm/lib/lemoncrm.lib.php');
+dol_include_once('/lemoncrm/core/lib/lemoncrm.lib.php');
 
 $langs->loadLangs(array("lemoncrm@lemoncrm", "companies"));
 
@@ -35,6 +35,7 @@ $search_type = GETPOST('search_type', 'alpha');
 $search_followup = GETPOST('search_followup', 'alpha');
 $search_date_start = GETPOST('search_date_start', 'alpha');
 $search_date_end = GETPOST('search_date_end', 'alpha');
+$search_author = GETPOSTINT('search_author');
 
 // Sort
 $sortfield = GETPOST('sortfield', 'alpha') ?: 'i.date_interaction';
@@ -51,6 +52,7 @@ if (GETPOST('button_removefilter_x', 'alpha') || GETPOST('button_removefilter.x'
 	$search_followup = '';
 	$search_date_start = '';
 	$search_date_end = '';
+	$search_author = 0;
 	if (!$socid && !$contactid) {
 		// Keep socid/contactid if tab context
 	}
@@ -144,11 +146,13 @@ $sql .= " i.followup_date, i.followup_done, i.followup_mode, i.sentiment,";
 $sql .= " i.prospect_status, i.fk_project,";
 $sql .= " p.ref as project_ref, p.title as project_title,";
 $sql .= " s.nom as thirdparty_name,";
-$sql .= " CONCAT(sp.firstname, ' ', sp.lastname) as contact_name";
+$sql .= " CONCAT(sp.firstname, ' ', sp.lastname) as contact_name,";
+$sql .= " CONCAT(u.firstname, ' ', u.lastname) as author_name";
 $sql .= " FROM ".MAIN_DB_PREFIX."lemoncrm_interaction as i";
 $sql .= " LEFT JOIN ".MAIN_DB_PREFIX."societe as s ON i.fk_soc = s.rowid";
 $sql .= " LEFT JOIN ".MAIN_DB_PREFIX."socpeople as sp ON i.fk_socpeople = sp.rowid";
 $sql .= " LEFT JOIN ".MAIN_DB_PREFIX."projet as p ON i.fk_project = p.rowid";
+$sql .= " LEFT JOIN ".MAIN_DB_PREFIX."user as u ON i.fk_user_author = u.rowid";
 $sql .= " WHERE i.entity = ".$conf->entity;
 
 if ($socid > 0) {
@@ -163,9 +167,14 @@ if (!empty($search_type)) {
 if ($search_followup == 'pending') {
 	$sql .= " AND i.followup_done = 0 AND i.followup_date IS NOT NULL";
 } elseif ($search_followup == 'overdue') {
-	$sql .= " AND i.followup_done = 0 AND i.followup_date < '".$db->idate(dol_now())."'";
+	// followup_date est une DATE : comparer à la date du jour, pas à un datetime
+	// (sinon les relances d'aujourd'hui sortent « en retard »)
+	$sql .= " AND i.followup_done = 0 AND i.followup_date < '".$db->escape(date('Y-m-d'))."'";
 } elseif ($search_followup == 'done') {
 	$sql .= " AND i.followup_done = 1";
+}
+if ($search_author > 0) {
+	$sql .= " AND i.fk_user_author = ".((int) $search_author);
 }
 if (!empty($search_date_start)) {
 	$sql .= " AND i.date_interaction >= '".$db->escape($search_date_start)." 00:00:00'";
@@ -240,6 +249,23 @@ print '<td class="liste_titre"></td>'; // projet
 // Summary
 print '<td class="liste_titre"></td>';
 
+// Author
+print '<td class="liste_titre">';
+print '<select name="search_author" class="flat maxwidth100">';
+print '<option value="0">'.$langs->trans('All').'</option>';
+$sqlu = "SELECT DISTINCT u.rowid, CONCAT(u.firstname, ' ', u.lastname) as name";
+$sqlu .= " FROM ".MAIN_DB_PREFIX."lemoncrm_interaction as i";
+$sqlu .= " INNER JOIN ".MAIN_DB_PREFIX."user as u ON i.fk_user_author = u.rowid";
+$sqlu .= " WHERE i.entity = ".((int) $conf->entity)." ORDER BY name";
+$resqlu = $db->query($sqlu);
+if ($resqlu) {
+	while ($ou = $db->fetch_object($resqlu)) {
+		print '<option value="'.$ou->rowid.'"'.($search_author == $ou->rowid ? ' selected' : '').'>'.dol_escape_htmltag(trim($ou->name)).'</option>';
+	}
+}
+print '</select>';
+print '</td>';
+
 // Followup
 print '<td class="liste_titre">';
 print '<select name="search_followup" class="flat">';
@@ -262,6 +288,7 @@ print_liste_field_titre('InteractionType', $_SERVER["PHP_SELF"], 'i.interaction_
 if (!$socid) print_liste_field_titre('ThirdParty', $_SERVER["PHP_SELF"], 's.nom', '', '', '', $sortfield, $sortorder);
 print_liste_field_titre('Project', $_SERVER["PHP_SELF"], 'p.ref', '', '', '', $sortfield, $sortorder);
 print_liste_field_titre('', '', '', '', '', '', '', ''); // summary preview
+print_liste_field_titre('Author', $_SERVER["PHP_SELF"], 'i.fk_user_author', '', '', '', $sortfield, $sortorder);
 print_liste_field_titre('FollowupDate', $_SERVER["PHP_SELF"], 'i.followup_date', '', '', '', $sortfield, $sortorder);
 print '</tr>';
 
@@ -280,7 +307,7 @@ $followup_modes = lemoncrm_get_followup_modes();
 
 // Rows
 $i = 0;
-$colcount = $socid ? 6 : 7; // +1 : colonne Projet
+$colcount = $socid ? 7 : 8; // colonnes Projet + Auteur incluses
 while ($i < min($num, $limit)) {
 	$obj = $db->fetch_object($resql);
 
@@ -346,6 +373,9 @@ while ($i < min($num, $limit)) {
 	print '<td class="tdoverflowmax300" style="color:#6b7280;font-size:0.9em">';
 	print dol_trunc(dol_escape_htmltag(trim($previewSummary)), 80);
 	print '</td>';
+
+	// Author
+	print '<td style="color:#6b7280;font-size:0.9em">'.dol_escape_htmltag(trim($obj->author_name ?? '')).'</td>';
 
 	// Followup
 	print '<td>';
