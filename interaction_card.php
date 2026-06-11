@@ -493,7 +493,7 @@ if ($action == 'create' || ($action == 'edit' && $id > 0)) {
 	// apparaissent alors sur la fiche projet
 	print '<div class="lcrm-detail-group">';
 	print '<span class="lcrm-detail-label">Projet lié</span>';
-	require_once DOL_DOCUMENT_ROOT.'/projet/class/html.formprojet.class.php';
+	require_once DOL_DOCUMENT_ROOT.'/core/class/html.formprojet.class.php';
 	$formproject = new FormProjets($db);
 	print $formproject->select_projects(-1, $curProject, 'fk_project', 0, 0, 1, 1);  // projets ouverts uniquement
 	print '</div>';
