@@ -378,10 +378,12 @@ if (!empty($search_date_end)) $sql .= " AND i.date_interaction <= '".$db->escape
 if ($search_followup == 'pending') $sql .= " AND i.followup_done = 0 AND i.followup_date IS NOT NULL";
 elseif ($search_followup == 'overdue') $sql .= " AND i.followup_done = 0 AND i.followup_date < '".$db->escape($today)."'";
 elseif ($search_followup == 'done') $sql .= " AND i.followup_done = 1";
-// Thread grouping: parent first, then children by date
-// Thread grouping: group threads together, sort groups by most recent interaction
+// Thread grouping : les fils restent groupés, les groupes sont triés par la date
+// d'interaction la plus récente du fil (PAS par rowid : une interaction antidatée
+// casserait l'ordre chronologique), puis parent d'abord et enfants par date
 $threadSortOrder = ($sortorder == 'ASC') ? 'ASC' : 'DESC';
-$sql .= " ORDER BY COALESCE(i.fk_parent, i.rowid) ".$threadSortOrder.", i.fk_parent IS NOT NULL ASC, i.date_interaction ASC";
+$sql .= " ORDER BY MAX(i.date_interaction) OVER (PARTITION BY COALESCE(i.fk_parent, i.rowid)) ".$threadSortOrder.",";
+$sql .= " COALESCE(i.fk_parent, i.rowid) ".$threadSortOrder.", i.fk_parent IS NOT NULL ASC, i.date_interaction ASC";
 $sql .= " LIMIT ".$limit;
 
 $resql = $db->query($sql);
