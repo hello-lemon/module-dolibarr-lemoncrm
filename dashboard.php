@@ -582,7 +582,14 @@ foreach ($allRows as $obj) {
 	}
 }
 
-// Rows
+// Rows.
+// PIÈGE : tout HTML imprimé ici est DANS le <form name="formlist"> global. Un <form>
+// imbriqué est invalide : le navigateur jette la balise et ses inputs cachés
+// (action=delete, id, token...) deviennent des champs du formulaire global → toute
+// soumission (loupe, Entrée dans un filtre) exécutait l'action de la dernière ligne
+// (incident : suppression silencieuse d'une interaction le 2026-06-11).
+// Les modales sont donc bufferisées et imprimées APRÈS le </form>.
+$modalsHtml = '';
 if ($num > 0) {
 	$socHelper3 = new Societe($db);
 	$interactionHelper = new LemonCRMInteraction($db);
@@ -683,15 +690,10 @@ if ($num > 0) {
 			print lemoncrm_format_date_fr($obj->followup_date);
 			print '<br>'.$interactionHelper->getFollowupBadge();
 			if (!$obj->followup_done && $user->hasRight('lemoncrm', 'interaction', 'write')) {
-				print ' <form method="POST" action="'.$_SERVER["PHP_SELF"].'" style="display:inline" onsubmit="event.stopPropagation();return confirm(\'Marquer comme fait ?\')">';
-				print '<input type="hidden" name="token" value="'.newToken().'">';
-				print '<input type="hidden" name="action" value="followupdone">';
-				print '<input type="hidden" name="id" value="'.$obj->rowid.'">';
-				if ($socid > 0) print '<input type="hidden" name="socid" value="'.$socid.'">';
-				print '<button type="submit" title="Marquer comme fait" style="border:0;background:transparent;padding:0;cursor:pointer" onclick="event.stopPropagation()">';
+				// Pas de <form> imbriqué dans formlist : bouton relié au formulaire partagé hors tableau
+				print ' <button type="button" class="lcrm-rowaction" data-action="followupdone" data-id="'.$obj->rowid.'" data-confirm="Marquer comme fait ?" title="Marquer comme fait" style="border:0;background:transparent;padding:0;cursor:pointer" onclick="event.stopPropagation()">';
 				print '<span class="fas fa-check" style="color:#38A169;font-size:0.8em"></span>';
 				print '</button>';
-				print '</form>';
 			}
 		}
 		print '</td>';
@@ -705,7 +707,8 @@ if ($num > 0) {
 
 		print '</tr>';
 
-		// Hidden modal content for this interaction
+		// Hidden modal content for this interaction — bufferisé, imprimé après </form>
+		ob_start();
 		print '<div class="lcrm-modal-content" id="'.$modalId.'" style="display:none">';
 		// Header
 		print '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">';
@@ -817,6 +820,7 @@ if ($num > 0) {
 		}
 		print '</div>';
 		print '</div>';
+		$modalsHtml .= ob_get_clean();
 	}
 }
 
@@ -826,6 +830,17 @@ if ($num == 0) {
 
 print '</table>';
 print '</form>';
+
+// Modales et formulaire d'action par ligne : OBLIGATOIREMENT hors du formulaire global
+print $modalsHtml;
+if ($user->hasRight('lemoncrm', 'interaction', 'write')) {
+	print '<form method="POST" action="'.$_SERVER["PHP_SELF"].'" id="lcrm-rowaction-form" style="display:none">';
+	print '<input type="hidden" name="token" value="'.newToken().'">';
+	print '<input type="hidden" name="action" value="">';
+	print '<input type="hidden" name="id" value="">';
+	if ($socid > 0) print '<input type="hidden" name="socid" value="'.$socid.'">';
+	print '</form>';
+}
 
 // Modal overlay
 print '<div class="lcrm-modal-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.3);z-index:9999;display:none;justify-content:center;align-items:center">';
@@ -837,6 +852,18 @@ print '</div>';
 // JS
 print '<script>
 $(function() {
+	// Actions par ligne (relance faite...) via le formulaire partagé hors tableau
+	$(document).on("click", ".lcrm-rowaction", function(e) {
+		e.preventDefault();
+		e.stopPropagation();
+		var msg = $(this).data("confirm");
+		if (msg && !confirm(msg)) return;
+		var $f = $("#lcrm-rowaction-form");
+		$f.find("[name=action]").val($(this).data("action"));
+		$f.find("[name=id]").val($(this).data("id"));
+		$f.submit();
+	});
+
 	// Open modal on message click
 	$(document).on("click", ".lcrm-modal-trigger", function(e) {
 		if ($(e.target).closest("a,input").length) return;

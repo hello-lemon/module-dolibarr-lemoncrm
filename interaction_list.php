@@ -429,16 +429,10 @@ while ($i < min($num, $limit)) {
 		print ' <a href="'.$editUrl.'" title="Modifier" style="margin-left:8px"><span class="fas fa-pencil-alt" style="color:#6b7280;font-size:0.85em"></span></a>';
 	}
 	if ($user->hasRight('lemoncrm', 'interaction', 'delete')) {
-		print ' <form method="POST" action="'.$_SERVER["PHP_SELF"].'" style="display:inline" onsubmit="return confirm(\'Supprimer cette interaction ?\')">';
-		print '<input type="hidden" name="token" value="'.newToken().'">';
-		print '<input type="hidden" name="action" value="delete">';
-		print '<input type="hidden" name="id" value="'.$obj->rowid.'">';
-		if ($socid > 0) print '<input type="hidden" name="socid" value="'.$socid.'">';
-		if ($contactid > 0) print '<input type="hidden" name="contactid" value="'.$contactid.'">';
-		print '<button type="submit" title="Supprimer" style="border:0;background:transparent;padding:0;cursor:pointer">';
+		// Pas de <form> imbriqué dans le formulaire de filtres : bouton relié au formulaire partagé hors tableau
+		print ' <button type="button" class="lcrm-rowaction" data-action="delete" data-id="'.$obj->rowid.'" data-confirm="Supprimer cette interaction ?" title="Supprimer" style="border:0;background:transparent;padding:0;cursor:pointer">';
 		print '<span class="fas fa-trash-alt" style="color:#ef4444;font-size:0.85em"></span>';
 		print '</button>';
-		print '</form>';
 	}
 	print '</div>';
 
@@ -471,9 +465,31 @@ if ($num == 0) {
 print '</table>';
 print '</form>';
 
+// Formulaire d'action par ligne : OBLIGATOIREMENT hors du formulaire de filtres
+if ($user->hasRight('lemoncrm', 'interaction', 'delete')) {
+	print '<form method="POST" action="'.$_SERVER["PHP_SELF"].'" id="lcrm-rowaction-form" style="display:none">';
+	print '<input type="hidden" name="token" value="'.newToken().'">';
+	print '<input type="hidden" name="action" value="">';
+	print '<input type="hidden" name="id" value="">';
+	if ($socid > 0) print '<input type="hidden" name="socid" value="'.$socid.'">';
+	if ($contactid > 0) print '<input type="hidden" name="contactid" value="'.$contactid.'">';
+	print '</form>';
+}
+
 // Accordion JS
 print '<script>
 $(function() {
+	$(document).on("click", ".lcrm-rowaction", function(e) {
+		e.preventDefault();
+		e.stopPropagation();
+		var msg = $(this).data("confirm");
+		if (msg && !confirm(msg)) return;
+		var $f = $("#lcrm-rowaction-form");
+		$f.find("[name=action]").val($(this).data("action"));
+		$f.find("[name=id]").val($(this).data("id"));
+		$f.submit();
+	});
+
 	$(".lcrm-row-toggle").click(function(e) {
 		// Don\'t toggle if clicking a link
 		if ($(e.target).closest("a").length) return;
