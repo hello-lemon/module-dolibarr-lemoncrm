@@ -378,11 +378,21 @@ if (!empty($search_date_end)) $sql .= " AND i.date_interaction <= '".$db->escape
 if ($search_followup == 'pending') $sql .= " AND i.followup_done = 0 AND i.followup_date IS NOT NULL";
 elseif ($search_followup == 'overdue') $sql .= " AND i.followup_done = 0 AND i.followup_date < '".$db->escape($today)."'";
 elseif ($search_followup == 'done') $sql .= " AND i.followup_done = 1";
-// Thread grouping : les fils restent groupés, les groupes sont triés par la date
-// d'interaction la plus récente du fil (PAS par rowid : une interaction antidatée
-// casserait l'ordre chronologique), puis parent d'abord et enfants par date
+// Thread grouping : les fils restent groupés, les groupes sont triés sur la valeur
+// de la colonne demandée agrégée par fil (PAS par rowid : une interaction antidatée
+// casserait l'ordre chronologique), puis parent d'abord et enfants par date.
+// Liste blanche des colonnes triables (le sortfield part dans le SQL).
+$sortableFields = array('i.date_interaction', 's.nom', 'i.interaction_type', 'i.direction', 'i.followup_date');
+if (!in_array($sortfield, $sortableFields, true)) {
+	$sortfield = 'i.date_interaction';
+}
 $threadSortOrder = ($sortorder == 'ASC') ? 'ASC' : 'DESC';
-$sql .= " ORDER BY MAX(i.date_interaction) OVER (PARTITION BY COALESCE(i.fk_parent, i.rowid)) ".$threadSortOrder.",";
+$threadKey = "PARTITION BY COALESCE(i.fk_parent, i.rowid)";
+$sql .= " ORDER BY MAX(".$sortfield.") OVER (".$threadKey.") ".$threadSortOrder.",";
+if ($sortfield != 'i.date_interaction') {
+	// Départage des ex æquo (même tiers, même type...) : fil le plus récent d'abord
+	$sql .= " MAX(i.date_interaction) OVER (".$threadKey.") DESC,";
+}
 $sql .= " COALESCE(i.fk_parent, i.rowid) ".$threadSortOrder.", i.fk_parent IS NOT NULL ASC, i.date_interaction ASC";
 $sql .= " LIMIT ".$limit;
 
